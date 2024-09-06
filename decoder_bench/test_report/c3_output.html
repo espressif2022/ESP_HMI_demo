@@ -1,0 +1,72 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>perf_benchmark Result</title>
+    </head>
+    <body>
+        <h1>Performance Benchmark Result(unit:ms)</h1>
+        <table border="1">
+            <thead>
+                <tr><th>Configuration</th><th>Type</th><th>esp32c3</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>variable</td><td>lv_sjpg</td><td>23.49</td></tr><tr><td>variable</td><td>lv_spng</td><td>32.20</td></tr><tr><td>variable</td><td>esp_lv_sjpg</td><td>13.59</td></tr><tr><td>variable</td><td>esp_lv_spng</td><td>29.49</td></tr><tr><td>mmap_enable</td><td>lv_sjpg</td><td>23.93</td></tr><tr><td>mmap_enable</td><td>lv_spng</td><td>32.67</td></tr><tr><td>mmap_disable</td><td>lv_sjpg</td><td>25.77</td></tr><tr><td>mmap_disable</td><td>lv_spng</td><td>33.14</td></tr><tr><td>mmap_enable</td><td>esp_lv_sjpg</td><td>14.55</td></tr><tr><td>mmap_disable</td><td>esp_lv_sjpg</td><td>14.79</td></tr><tr><td>mmap_enable</td><td>esp_lv_spng</td><td>30.21</td></tr><tr><td>mmap_disable</td><td>esp_lv_spng</td><td>30.70</td></tr><tr><td>mmap_enable</td><td>esp_lv_sqoi</td><td>13.33</td></tr><tr><td>mmap_disable</td><td>esp_lv_sqoi</td><td>13.60</td></tr><tr><td>spiffs</td><td>lv_sjpg</td><td>27.99</td></tr><tr><td>spiffs</td><td>lv_spng</td><td>35.68</td></tr><tr><td>spiffs</td><td>esp_lv_sjpg</td><td>17.36</td></tr><tr><td>spiffs</td><td>esp_lv_spng</td><td>33.24</td></tr><tr><td>spiffs</td><td>esp_lv_sqoi</td><td>16.90</td></tr>
+            </tbody>
+        </table>
+        
+        <h2>Type: esp_lv_sjpg</h2>
+        <table border="1">
+            <thead>
+                <tr><th>Configuration</th><th>esp32c3</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>variable</td><td>13.59</td></tr><tr><td>mmap_enable</td><td>14.55</td></tr><tr><td>mmap_disable</td><td>14.79</td></tr><tr><td>spiffs</td><td>17.36</td></tr>
+            </tbody>
+        </table>
+        
+        <h2>Type: esp_lv_spng</h2>
+        <table border="1">
+            <thead>
+                <tr><th>Configuration</th><th>esp32c3</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>variable</td><td>29.49</td></tr><tr><td>mmap_enable</td><td>30.21</td></tr><tr><td>mmap_disable</td><td>30.70</td></tr><tr><td>spiffs</td><td>33.24</td></tr>
+            </tbody>
+        </table>
+        
+        <h2>Type: esp_lv_sqoi</h2>
+        <table border="1">
+            <thead>
+                <tr><th>Configuration</th><th>esp32c3</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>mmap_enable</td><td>13.33</td></tr><tr><td>mmap_disable</td><td>13.60</td></tr><tr><td>spiffs</td><td>16.90</td></tr>
+            </tbody>
+        </table>
+        
+        <h2>Type: lv_sjpg</h2>
+        <table border="1">
+            <thead>
+                <tr><th>Configuration</th><th>esp32c3</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>variable</td><td>23.49</td></tr><tr><td>mmap_enable</td><td>23.93</td></tr><tr><td>mmap_disable</td><td>25.77</td></tr><tr><td>spiffs</td><td>27.99</td></tr>
+            </tbody>
+        </table>
+        
+        <h2>Type: lv_spng</h2>
+        <table border="1">
+            <thead>
+                <tr><th>Configuration</th><th>esp32c3</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>variable</td><td>32.20</td></tr><tr><td>mmap_enable</td><td>32.67</td></tr><tr><td>mmap_disable</td><td>33.14</td></tr><tr><td>spiffs</td><td>35.68</td></tr>
+            </tbody>
+        </table>
+        
+    </body>
+    </html>
+    

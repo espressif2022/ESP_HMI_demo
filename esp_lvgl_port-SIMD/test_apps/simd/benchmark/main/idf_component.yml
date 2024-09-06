@@ -1,0 +1,8 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=4.4"
+  esp_lvgl_port:
+    version: "*"
+    override_path: "../../../../"
+  lvgl/lvgl:
+    version: "9.1.0"

@@ -1,0 +1,6 @@
+--flash_mode dio --flash_freq 60m --flash_size 4MB
+0x0 ./build/bootloader/bootloader.bin
+0x10000 ./build/c2_lcdkit_demo.bin
+0x8000 ./build/partition_table/partition-table.bin
+0x281000 ./build/mmap_build/spiffs_assets/assets.bin
+0x396000 ./AABBCCDDEE22.bin

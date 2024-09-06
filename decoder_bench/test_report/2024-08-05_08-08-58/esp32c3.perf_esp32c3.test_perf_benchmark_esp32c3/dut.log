@@ -1,0 +1,29 @@
+I (322) heap_init: At 3FCDC710 len 0000294C (10 KiB): Retention RAM
+I (329) heap_init: At 50000200 len 00001DE8 (7 KiB): RTCRAM
+I (337) spi_flash: detected chip: generic
+I (340) spi_flash: flash io: dio
+I (344) sleep: Configure to isolate all GPIO pins in sleep state
+I (351) sleep: Enable automatic switching of GPIO sleep configuration
+I (358) main_task: Started on CPU0
+I (362) main_task: Calling app_main()
+I (366) perf_decoder: Perf ctr target: esp32c3
+Perf ctr[0], [       variable][        lv_sjpg]: 23.49 ms
+Perf ctr[0], [       variable][        lv_spng]: 32.20 ms
+Perf ctr[0], [       variable][    esp_lv_sjpg]: 13.59 ms
+Perf ctr[0], [       variable][    esp_lv_spng]: 29.49 ms
+Perf ctr[0], [    mmap_enable][        lv_sjpg]: 23.93 ms
+Perf ctr[0], [    mmap_enable][        lv_spng]: 32.67 ms
+Perf ctr[0], [   mmap_disable][        lv_sjpg]: 25.77 ms
+Perf ctr[0], [   mmap_disable][        lv_spng]: 33.14 ms
+Perf ctr[0], [    mmap_enable][    esp_lv_sjpg]: 14.55 ms
+Perf ctr[0], [   mmap_disable][    esp_lv_sjpg]: 14.79 ms
+Perf ctr[0], [    mmap_enable][    esp_lv_spng]: 30.21 ms
+Perf ctr[0], [   mmap_disable][    esp_lv_spng]: 30.70 ms
+Perf ctr[0], [    mmap_enable][    esp_lv_sqoi]: 13.33 ms
+Perf ctr[0], [   mmap_disable][    esp_lv_sqoi]: 13.60 ms
+Perf ctr[0], [         spiffs][        lv_sjpg]: 27.99 ms
+Perf ctr[0], [         spiffs][        lv_spng]: 35.68 ms
+Perf ctr[0], [         spiffs][    esp_lv_sjpg]: 17.36 ms
+Perf ctr[0], [         spiffs][    esp_lv_spng]: 33.24 ms
+Perf ctr[0], [         spiffs][    esp_lv_sqoi]: 16.90 ms
+I (5094) main_task: Returned from app_main()

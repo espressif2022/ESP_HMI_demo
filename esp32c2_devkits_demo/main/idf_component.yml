@@ -1,0 +1,7 @@
+description: BSP Display Audio Photo Example
+dependencies:
+  espressif/pwm_audio: "^1.1.1"
+  espressif/esp_lv_spng: "^0.1.0"
+  espressif/esp_mmap_assets: "*"
+  espressif/esp_rainmaker: "1.3.0"
+  lvgl/lvgl: "8.3.11"
