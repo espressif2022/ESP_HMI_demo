@@ -13,7 +13,8 @@
 #include "bsp/esp-bsp.h"
 #include "bsp/display.h"
 
-static const char *TAG = "main";
+#include "lv_example_pub.h"
+#include "button_event.h"
 
 static button_handle_t *g_btn_handle = NULL;
 
@@ -96,17 +97,22 @@ void app_main(void)
 
     printf_stack();
     bsp_display_start();
+    bsp_button_init();
 
-    app_btn_init();
-    app_btn_register_callback(BSP_BUTTON_CONFIG, BUTTON_PRESS_UP, btn_select_sw_cb, NULL);
-    app_btn_register_callback(BSP_BUTTON_CONFIG, BUTTON_PRESS_DOWN, btn_select_sw_cb, NULL);
+    // app_btn_init();
+    // app_btn_register_callback(BSP_BUTTON_CONFIG, BUTTON_PRESS_UP, btn_select_sw_cb, NULL);
+    // app_btn_register_callback(BSP_BUTTON_CONFIG, BUTTON_PRESS_DOWN, btn_select_sw_cb, NULL);
+    
+    ui_obj_to_encoder_init();
+    lv_create_home(&boot_Layer);
+    lv_create_clock(&clock_screen_layer, TIME_ENTER_CLOCK_2MIN);
+    // if (button_gpio_get_key_level((void *)BSP_LCD_SELECT)) {
+    //     ESP_LOGI(TAG, "enter 1.28 screen");
+    //     ui_1_28_start();
+    // } else {
+    //     ESP_LOGI(TAG, "enter 0.96 screen");
+    //     toothbrush_start();
+    //     return;
+    // }
 
-    if (button_gpio_get_key_level((void *)BSP_LCD_SELECT)) {
-        ESP_LOGI(TAG, "enter 1.28 screen");
-        ui_1_28_start();
-    } else {
-        ESP_LOGI(TAG, "enter 0.96 screen");
-        toothbrush_start();
-        return;
-    }
 }

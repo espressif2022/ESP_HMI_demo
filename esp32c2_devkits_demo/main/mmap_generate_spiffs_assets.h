@@ -14,7 +14,7 @@
 #include "esp_mmap_assets.h"
 
 #define MMAP_SPIFFS_ASSETS_FILES           72
-#define MMAP_SPIFFS_ASSETS_CHECKSUM        0x6309
+#define MMAP_SPIFFS_ASSETS_CHECKSUM        0xE41E
 
 enum MMAP_SPIFFS_ASSETS_LISTS {
     MMAP_SPIFFS_ASSETS_CHILD0001_SQOI = 0,        /*!< child0001.sqoi */

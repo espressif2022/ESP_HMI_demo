@@ -9,6 +9,14 @@ idf_component_register(
         "gui/toothbrush_ui"
         "gui/toothbrush_ui/screens"
         "gui/toothbrush_ui/images"
+                    "ui/fonts"
+                    "ui/imgs"
+                    "ui/imgs/image_language"
+                    "ui/imgs/image_light"
+                    "ui/imgs/image_standby"
+                    "ui/imgs/image_wash"
+                    "ui"
+                    "ui/layer_manage"
     INCLUDE_DIRS
         "."
         "0_96_UI"
@@ -17,6 +25,9 @@ idf_component_register(
         "gui"
         "gui/toothbrush_ui"
         "gui/toothbrush_ui/screens"
-        "gui/toothbrush_ui/images")
+        "gui/toothbrush_ui/images"
+                    "ui/layer_manage")
+add_compile_definitions(LV_LVGL_H_INCLUDE_SIMPLE)
+add_compile_definitions(CONFIG_SOC_ADC_SUPPORTED)
 
 spiffs_create_partition_assets(assets ../spiffs_assets FLASH_IN_PROJECT)
