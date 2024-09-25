@@ -106,7 +106,7 @@ void app_main(void)
         ui_1_28_start();
     } else {
         ESP_LOGI(TAG, "enter 0.96 screen");
-        toothbrush_start();
+        // toothbrush_start();
         return;
     }
 }

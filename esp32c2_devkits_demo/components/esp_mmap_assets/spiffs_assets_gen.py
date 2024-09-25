@@ -3,20 +3,18 @@
 import io
 import os
 import argparse
+import json
 import shutil
 import math
 import sys
 import time
-import qoi
 import numpy as np
 
 sys.dont_write_bytecode = True
 
 from PIL import Image
 from datetime import datetime
-from qoi import QOIColorSpace
-
-header_file = 'assets_generate.h'
+from qoi_conv import replace_extension, Qoi
 
 def generate_header_filename(path):
     asset_name = os.path.basename(path)
@@ -35,9 +33,11 @@ def sort_key(filename):
 def split_image(im, block_size, input_dir, ext, convert_to_qoi):
     """Splits the image into blocks based on the block size."""
     width, height = im.size
-    splits = math.ceil(height / block_size)
 
-    print(f'RES: {width} x {height}\tblock_size: {block_size}\text: {ext}')
+    if block_size:
+        splits = math.ceil(height / block_size)
+    else:
+        splits = 1
 
     for i in range(splits):
         if i < splits - 1:
@@ -50,13 +50,10 @@ def split_image(im, block_size, input_dir, ext, convert_to_qoi):
 
         if convert_to_qoi:
             with Image.open(output_path) as img:
-                img = img.convert('RGBA')
-                rgb_data = np.array(img)
-                qoi_data = qoi.encode(rgb_data, colorspace=QOIColorSpace.SRGB)
-                temp_qoi_path = os.path.join(input_dir, str(i) + '.qoi')
-                with open(temp_qoi_path, 'wb') as f:
-                    f.write(qoi_data)
+                out_path = replace_extension(output_path, 'qoi')
+                new_image = Qoi().save(out_path, np.asarray(img))
                 os.remove(output_path)
+
 
     return width, height, splits
 
@@ -95,13 +92,16 @@ def create_header(width, height, splits, split_height, lenbuf, ext):
 def save_image(output_file_path, header, split_data):
     """Saves the image with the constructed header and split data."""
     with open(output_file_path, 'wb') as f:
-        f.write(header + split_data)
+        if header is not None:
+            f.write(header + split_data)
+        else:
+            f.write(split_data)
 
 def process_image(input_file, height_str, output_extension, convert_to_qoi=False):
     """Main function to process the image and save it as .sjpg, .spng, or .sqoi."""
     try:
         SPLIT_HEIGHT = int(height_str)
-        if SPLIT_HEIGHT <= 0:
+        if SPLIT_HEIGHT < 0:
             raise ValueError('Height must be a positive integer')
     except ValueError as e:
         print('Error: Height must be a positive integer')
@@ -132,11 +132,16 @@ def process_image(input_file, height_str, output_extension, convert_to_qoi=False
         lenbuf.append(len(a))
         os.remove(os.path.join(input_dir, str(i) + ext))
 
-    header = create_header(width, height, splits, SPLIT_HEIGHT, lenbuf, ext)
-    output_file_path = os.path.join(input_dir, OUTPUT_FILE_NAME + output_extension)
+    header = None
+    if splits == 1 and convert_to_qoi:
+        output_file_path = os.path.join(input_dir, OUTPUT_FILE_NAME + ext)
+    else:
+        header = create_header(width, height, splits, SPLIT_HEIGHT, lenbuf, ext)
+        output_file_path = os.path.join(input_dir, OUTPUT_FILE_NAME + output_extension)
+
     save_image(output_file_path, header, split_data)
 
-    print('Completed, saved as:', os.path.basename(output_file_path), '\n')
+    # print('Completed, saved as:', os.path.basename(output_file_path), '\n')
 
 def convert_image_to_qoi(input_file, height_str):
     process_image(input_file, height_str, '.sqoi', convert_to_qoi=True)
@@ -235,20 +240,11 @@ def pack_models(model_path, assets_c_path, out_file, assets_path, max_name_len):
     print(f'All bin files have been merged into {out_file}')
 
 
-def parse_hex(value):
-    try:
-        return int(value, 16)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f'Invalid hex value: {value}')
-
-def copy_assets_to_build(assets_path, target_path, support_spng, support_sjpg, support_qoi, support_format, split_height):
+def copy_assets_to_build(assets_path, target_path, spng_enable, sjpg_enable, qoi_enable, sqoi_enable, support_format, split_height):
     """
     Copy assets to target_path based on sdkconfig
     """
     format_string = support_format
-    spng_enable = True if support_spng == 'ON' else False
-    sjpg_enable = True if support_sjpg == 'ON' else False
-    qoi_enable = True if support_qoi == 'ON' else False
 
     format_list = format_string.split(',')
     format_tuple = tuple(format_list)
@@ -271,43 +267,53 @@ def copy_assets_to_build(assets_path, target_path, support_spng, support_sjpg, s
             print(f'No match found for file: {filename}, format_tuple: {format_tuple}')
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Assert generator tool')
-    parser.add_argument('-d1', '--project_path')
-    parser.add_argument('-d2', '--main_path')
-    parser.add_argument('-d3', '--assets_path')
-    parser.add_argument('-d4', '--size', type=parse_hex)
-    parser.add_argument('-d5', '--image_file')
-    parser.add_argument('-d6', '--support_spng')
-    parser.add_argument('-d7', '--support_sjpg')
-    parser.add_argument('-d8', '--support_format')
-    parser.add_argument('-d9', '--split_height')
-    parser.add_argument('-d10', '--max_name_len')
-    parser.add_argument('-d11', '--support_qoi')
-
+    parser = argparse.ArgumentParser(description="Move and Pack assets.")
+    parser.add_argument('--config', required=True, help='Path to the configuration file')
     args = parser.parse_args()
 
-    print('--support_format:',  args.support_format)
-    print('--support_spng:',  args.support_spng)
-    print('--support_sjpg:',  args.support_sjpg)
-    print('--support_qoi:',  args.support_qoi)
-    if args.support_spng != 'OFF' or args.support_sjpg != 'OFF':
-        print('--split_height:', args.split_height)
+    with open(args.config, 'r') as f:
+        config = json.load(f)
 
-    image_file = args.image_file
+    project_dir = config['project_dir']
+    main_path = config['main_path']
+    assets_path = config['assets_path']
+    assets_size = config['assets_size']
+    image_file = config['image_file']
+
+    project_dir = config['project_dir']
+    name_length = config['name_length']
+    split_height = config['split_height']
+
+    support_format = config['support_format']
+    support_spng = config['support_spng']
+    support_sjpg = config['support_sjpg']
+    support_qoi = config['support_qoi']
+    support_sqoi = config['support_sqoi']
+
+    print('--support_format:',  support_format)
+    print('--support_spng:',  support_spng)
+    print('--support_sjpg:',  support_sjpg)
+    print('--support_qoi:',  support_qoi)
+    if support_sqoi:
+        print('--support_sqoi:',  support_sqoi)
+    if support_spng or support_sjpg or support_sqoi:
+        print('--split_height:', split_height)
+
+    image_file = image_file
     target_path = os.path.dirname(image_file)
 
     if os.path.exists(target_path):
         shutil.rmtree(target_path)
     os.makedirs(target_path)
 
-    copy_assets_to_build(args.assets_path, target_path, args.support_spng, args.support_sjpg, args.support_qoi, args.support_format, args.split_height)
-    pack_models(target_path, args.main_path, image_file, args.assets_path, args.max_name_len)
+    copy_assets_to_build(assets_path, target_path, support_spng, support_sjpg, support_qoi, support_sqoi, support_format, split_height)
+    pack_models(target_path, main_path, image_file, assets_path, name_length)
 
     total_size = os.path.getsize(os.path.join(target_path, image_file))
     recommended_size = int(math.ceil(total_size/1024))
-    partition_size = int(math.ceil(args.size/1024))
+    partition_size = int(math.ceil(int(assets_size, 16)/1024))
 
-    if args.size <= total_size:
+    if int(assets_size, 16) <= total_size:
         print('Given assets partition size: %dK' % (partition_size))
         print('Recommended assets partition size: %dK' % (recommended_size))
         print('\033[1;31mError:\033[0m assets partition size is smaller than recommended.')

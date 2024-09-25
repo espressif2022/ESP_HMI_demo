@@ -14,7 +14,7 @@
 #include "bsp/display.h"
 
 #include "esp_lv_spng.h"
-#include "esp_lv_qoi.h"
+#include "esp_lv_sqoi.h"
 #include "mmap_generate_spiffs_assets.h"
 
 static const char *TAG = "1_28_ui";
@@ -52,7 +52,7 @@ static bool anmi_do_run = true;
 
 static mmap_assets_handle_t asset_handle;
 static esp_lv_spng_decoder_handle_t spng_decoder;
-static esp_lv_qoi_decoder_handle_t qoi_decoder;
+static esp_lv_sqoi_decoder_handle_t qoi_decoder;
 
 static PerfCounter perf_counters[MAX_COUNTERS] = {0};
 
@@ -87,7 +87,7 @@ void ui_1_28_start()
 
     image_mmap_init();
     esp_lv_split_png_init(&spng_decoder);
-    esp_lv_qoi_init(&qoi_decoder);
+    esp_lv_split_qoi_init(&qoi_decoder);
 
     bsp_display_lock(0);
 
@@ -102,10 +102,7 @@ void ui_1_28_start()
     lv_obj_set_style_bg_color(obj_bg, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_width(obj_bg, 0, 0);
 
-    lv_obj_t *obj_img_bg = lv_img_create(obj_bg);
-    lv_obj_set_align(obj_img_bg, LV_ALIGN_CENTER);
-
-    lv_obj_t *obj_img_run_particles = lv_img_create(obj_img_bg);
+    lv_obj_t *obj_img_run_particles = lv_img_create(obj_bg);
     lv_obj_set_align(obj_img_run_particles, LV_ALIGN_CENTER);
 
     bsp_display_unlock();
@@ -121,25 +118,22 @@ void ui_1_28_start()
         if (theme_last ^ theme_select) {
             theme_last = theme_select;
             if (THEME_SELECT_CHILD == theme_select) {
-                lv_img_set_src(obj_img_bg, &yellow_bg);
-                img_ossfet = MMAP_SPIFFS_ASSETS_CHILD0001_SQOI;
+                img_ossfet = 0;
             } else if (THEME_SELECT_CLEAN == theme_select) {
-                lv_img_set_src(obj_img_bg, &blue_bg);
-                img_ossfet = MMAP_SPIFFS_ASSETS_CLEAN0001_SQOI;
+                img_ossfet = 0;
             } else if (THEME_SELECT_QUICK == theme_select) {
-                lv_img_set_src(obj_img_bg, &red_bg);
-                img_ossfet = MMAP_SPIFFS_ASSETS_QUICK0001_SQOI;
+                img_ossfet = 0;
             }
         }
         if (true == anmi_do_run) {
             list++;
             lv_obj_clear_flag(obj_img_run_particles, LV_OBJ_FLAG_HIDDEN);
-            img_dsc_motive.data_size = mmap_assets_get_size(asset_handle, img_ossfet + (list) % 23);
-            img_dsc_motive.data = mmap_assets_get_mem(asset_handle, img_ossfet + (list) % 23);
+            img_dsc_motive.data_size = mmap_assets_get_size(asset_handle, img_ossfet + (list) % MMAP_SPIFFS_ASSETS_FILES);
+            img_dsc_motive.data = mmap_assets_get_mem(asset_handle, img_ossfet + (list) % MMAP_SPIFFS_ASSETS_FILES);
             lv_img_set_src(obj_img_run_particles, &img_dsc_motive);
 
             if (fps_count % 10 == 0) {
-                perfmon_start(0, "PFS", "qoi");
+                perfmon_start(0, "PFS", "png");
                 // printf_stack();
             } else if (fps_count % 10 == 9) {
                 perfmon_end(0, 10);

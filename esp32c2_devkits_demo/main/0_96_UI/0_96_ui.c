@@ -35,8 +35,8 @@
 #include "buzzer.h"
 #include "motor.h"
 #include "power.h"
-#include "toothbrush_ui/ui.h"
-#include "toothbrush_ui/ui_helpers.h"
+// #include "toothbrush_ui/ui.h"
+// #include "toothbrush_ui/ui_helpers.h"
 #include "gui/ui_main.h"
 
 #include "rainmaker.h"

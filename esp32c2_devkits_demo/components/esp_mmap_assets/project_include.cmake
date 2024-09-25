@@ -37,35 +37,6 @@ function(spiffs_create_partition_assets partition base_dir)
         endif()
     endif()
 
-    # Try to install qoi using pip
-    execute_process(
-        COMMAND ${python} -c "import qoi"
-        RESULT_VARIABLE QOI_FOUND
-        OUTPUT_QUIET
-        ERROR_QUIET
-    )
-
-    if(QOI_FOUND EQUAL 0)
-        message(STATUS "qoi is installed.")
-    else()
-        message(STATUS "qoi not found. Attempting to install it using pip...")
-
-        execute_process(
-            COMMAND ${python} -m pip install -U qoi
-            RESULT_VARIABLE result
-            OUTPUT_VARIABLE output
-            ERROR_VARIABLE error
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_STRIP_TRAILING_WHITESPACE
-        )
-
-        if(result)
-            message(FATAL_ERROR "Failed to install qoi using pip. Please install it manually.\nError: ${error}")
-        else()
-            message(STATUS "qoi successfully installed.")
-        endif()
-    endif()
-
     get_filename_component(base_dir_full_path ${base_dir} ABSOLUTE)
     get_filename_component(base_dir_name "${base_dir_full_path}" NAME)
 
@@ -95,28 +66,36 @@ function(spiffs_create_partition_assets partition base_dir)
         set(image_file ${CMAKE_BINARY_DIR}/mmap_build/${base_dir_name}/${partition}.bin)
         set(MVMODEL_EXE ${TARGET_COMPONENT_PATH}/spiffs_assets_gen.py)
 
-        set(MMAP_SUPPORT_SPNG "$<IF:$<STREQUAL:${CONFIG_MMAP_SUPPORT_SPNG},y>,ON,OFF>")
-        set(MMAP_SUPPORT_SJPG "$<IF:$<STREQUAL:${CONFIG_MMAP_SUPPORT_SJPG},y>,ON,OFF>")
-        set(MMAP_SUPPORT_QOI "$<IF:$<STREQUAL:${CONFIG_MMAP_SUPPORT_QOI},y>,ON,OFF>")
+        set(SUPPORT_VARS SPNG SJPG QOI SQOI)
+        foreach(var IN LISTS SUPPORT_VARS)
+            set(config_var "CONFIG_MMAP_SUPPORT_${var}")
+            set(support_var "SUPPORT_${var}")
+
+            if(NOT DEFINED ${config_var} OR ${config_var} STREQUAL "")
+                set(${config_var} "n")
+            endif()
+
+            if("${${config_var}}" STREQUAL "y")
+                set(${support_var} "true")
+            else()
+                set(${support_var} "false")
+            endif()
+        endforeach()
 
         if(NOT DEFINED CONFIG_MMAP_SPLIT_HEIGHT OR CONFIG_MMAP_SPLIT_HEIGHT STREQUAL "")
             set(CONFIG_MMAP_SPLIT_HEIGHT 0)  # Default value
         endif()
 
+        set(CONFIG_FILE_PATH "${CMAKE_CURRENT_BINARY_DIR}/mmap_build/${base_dir_name}/config.json")
+        configure_file(
+            "${TARGET_COMPONENT_PATH}/config_template.json.in"
+            "${CONFIG_FILE_PATH}"
+            @ONLY
+        )
+
         add_custom_target(spiffs_${partition}_bin ALL
             COMMENT "Move and Pack assets..."
-            COMMAND python ${MVMODEL_EXE}
-            -d1 ${PROJECT_DIR}
-            -d2 ${CMAKE_CURRENT_LIST_DIR}
-            -d3 ${base_dir_full_path}
-            -d4 ${size}
-            -d5 ${image_file}
-            -d6 ${MMAP_SUPPORT_SPNG}
-            -d7 ${MMAP_SUPPORT_SJPG}
-            -d8 ${CONFIG_MMAP_FILE_SUPPORT_FORMAT}
-            -d9 ${CONFIG_MMAP_SPLIT_HEIGHT}
-            -d10 ${CONFIG_MMAP_FILE_NAME_LENGTH}
-            -d11 ${MMAP_SUPPORT_QOI}
+            COMMAND python ${MVMODEL_EXE} --config "${CONFIG_FILE_PATH}"
             DEPENDS ${arg_DEPENDS}
             VERBATIM)
 
