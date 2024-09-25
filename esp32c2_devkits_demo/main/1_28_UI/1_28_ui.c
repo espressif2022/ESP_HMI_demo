@@ -13,8 +13,10 @@
 #include "bsp/esp-bsp.h"
 #include "bsp/display.h"
 
+#include "esp_lv_fs.h"
 #include "esp_lv_spng.h"
 #include "esp_lv_sqoi.h"
+
 #include "mmap_generate_spiffs_assets.h"
 
 static const char *TAG = "1_28_ui";
@@ -51,6 +53,8 @@ static theme_select_t theme_select = THEME_SELECT_CHILD;
 static bool anmi_do_run = true;
 
 static mmap_assets_handle_t asset_handle;
+static esp_lv_fs_handle_t fs_drive_b_handle;
+
 static esp_lv_spng_decoder_handle_t spng_decoder;
 static esp_lv_sqoi_decoder_handle_t qoi_decoder;
 
@@ -128,12 +132,23 @@ void ui_1_28_start()
         if (true == anmi_do_run) {
             list++;
             lv_obj_clear_flag(obj_img_run_particles, LV_OBJ_FLAG_HIDDEN);
+
+#if 0
             img_dsc_motive.data_size = mmap_assets_get_size(asset_handle, img_ossfet + (list) % MMAP_SPIFFS_ASSETS_FILES);
             img_dsc_motive.data = mmap_assets_get_mem(asset_handle, img_ossfet + (list) % MMAP_SPIFFS_ASSETS_FILES);
             lv_img_set_src(obj_img_run_particles, &img_dsc_motive);
+#else
+            char path[30];
+            sprintf(path, "B:frame_%03d.sqoi", (list) % MMAP_SPIFFS_ASSETS_FILES);
+            lv_img_set_src(obj_img_run_particles, path);
+#endif
 
             if (fps_count % 10 == 0) {
+#if CONFIG_MMAP_SUPPORT_QOI
+                perfmon_start(0, "PFS", "qoi");
+#else
                 perfmon_start(0, "PFS", "png");
+#endif
                 // printf_stack();
             } else if (fps_count % 10 == 9) {
                 perfmon_end(0, 10);
@@ -181,8 +196,17 @@ static void image_mmap_init()
         .checksum = MMAP_SPIFFS_ASSETS_CHECKSUM,
         .flags = {
             .mmap_enable = true,
+            // .mmap_enable = false,
         }
     };
 
     ESP_ERROR_CHECK(mmap_assets_new(&config, &asset_handle));
+
+
+    const fs_cfg_t fs_cfg_b = {
+        .fs_letter = 'B',
+        .fs_assets = asset_handle,
+        .fs_nums = MMAP_SPIFFS_ASSETS_FILES
+    };
+    esp_lv_fs_desc_init(&fs_cfg_b, &fs_drive_b_handle);
 }

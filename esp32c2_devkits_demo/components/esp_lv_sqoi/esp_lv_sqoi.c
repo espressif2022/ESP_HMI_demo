@@ -45,7 +45,7 @@ typedef struct {
     int * frame_base_offset;            //to save base offset for fseek
     uint8_t *frame_cache;
     io_source_t io;
-} QOI;
+} SQOI;
 
 /**********************
  *  STATIC PROTOTYPES
@@ -57,8 +57,8 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
 static void decoder_close(lv_img_decoder_t *dec, lv_img_decoder_dsc_t *dsc);
 static void convert_color_depth(uint8_t *img, uint32_t px_cnt);
 static int is_qoi(const uint8_t *raw_data, size_t len);
-static void lv_qoi_cleanup(QOI *qoi);
-static void lv_qoi_free(QOI *qoi);
+static void lv_qoi_cleanup(SQOI *qoi);
+static void lv_qoi_free(SQOI *qoi);
 
 static lv_res_t qoi_decode32(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t *in, size_t insize);
 
@@ -312,15 +312,15 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
         uint32_t png_height;            /*No used, just required by he decoder*/
 
         uint8_t *data;
-        QOI *qoi = (QOI *) dsc->user_data;
+        SQOI *qoi = (SQOI *) dsc->user_data;
         const uint32_t raw_qoi_data_size = ((lv_img_dsc_t *)dsc->src)->data_size;
         if (qoi == NULL) {
-            qoi =  malloc(sizeof(QOI));
+            qoi =  malloc(sizeof(SQOI));
             if (!qoi) {
                 return LV_RES_INV;
             }
 
-            memset(qoi, 0, sizeof(QOI));
+            memset(qoi, 0, sizeof(SQOI));
 
             dsc->user_data = qoi;
             qoi->qoi_data = (uint8_t *)((lv_img_dsc_t *)(dsc->src))->data;
@@ -403,15 +403,15 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
             uint8_t *qoi_data = NULL;      /*Pointer to the loaded data. Same as the original file just loaded into the RAM*/
             size_t qoi_data_size;   /*Size of `qoi_data` in bytes*/
 
-            QOI *qoi = (QOI *) dsc->user_data;
+            SQOI *qoi = (SQOI *) dsc->user_data;
             if (qoi == NULL) {
-                qoi = malloc(sizeof(QOI));
+                qoi = malloc(sizeof(SQOI));
                 if (!qoi) {
                     ESP_LOGE(TAG, "Failed to allocate memory for qoi");
                     return LV_RES_INV;
                 }
 
-                memset(qoi, 0, sizeof(QOI));
+                memset(qoi, 0, sizeof(SQOI));
                 dsc->user_data = qoi;
             }
 
@@ -460,15 +460,15 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
 
             if (strcmp((char *)buff, "_SQOI__") == 0) {
 
-                QOI *sqoi = (QOI *)dsc->user_data;
+                SQOI *sqoi = (SQOI *)dsc->user_data;
                 if (sqoi == NULL) {
-                    sqoi = malloc(sizeof(QOI));
+                    sqoi = malloc(sizeof(SQOI));
                     if (! sqoi) {
                         ESP_LOGI(TAG, "Failed to allocate memory for sqoi");
                         lv_fs_close(&lv_file);
                         return LV_RES_INV;
                     }
-                    memset(sqoi, 0, sizeof(QOI));
+                    memset(sqoi, 0, sizeof(SQOI));
                     dsc->user_data = sqoi;
                 }
                 data = buff;
@@ -574,7 +574,7 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
         uint32_t rn = 0;
         lv_fs_res_t res;
 
-        QOI *sqoi = (QOI *) dsc->user_data;
+        SQOI *sqoi = (SQOI *) dsc->user_data;
 
         lv_fs_file_t *lv_file_p = &(sqoi->io.lv_file);
         if (!lv_file_p) {
@@ -627,7 +627,7 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
         memcpy(buf, cache, color_depth * len);
         return LV_RES_OK;
     } else if (dsc->src_type == LV_IMG_SRC_VARIABLE) {
-        QOI *qoi = (QOI *) dsc->user_data;
+        SQOI *qoi = (SQOI *) dsc->user_data;
         int qoi_req_frame_index = y / qoi->qoi_single_frame_height;
 
         /*If line not from cache, refresh cache */
@@ -675,7 +675,7 @@ static void decoder_close(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *dsc)
 {
     LV_UNUSED(decoder);
     /*Free all allocated data*/
-    QOI *qoi = (QOI *) dsc->user_data;
+    SQOI *qoi = (SQOI *) dsc->user_data;
     if (!qoi) {
         return;
     }
@@ -754,7 +754,7 @@ static int is_qoi(const uint8_t *raw_data, size_t len)
     return memcmp(magic, raw_data, sizeof(magic)) == 0;
 }
 
-static void lv_qoi_free(QOI *qoi)
+static void lv_qoi_free(SQOI *qoi)
 {
     if (qoi->frame_cache) {
         free(qoi->frame_cache);
@@ -767,7 +767,7 @@ static void lv_qoi_free(QOI *qoi)
     }
 }
 
-static void lv_qoi_cleanup(QOI *qoi)
+static void lv_qoi_cleanup(SQOI *qoi)
 {
     if (!qoi) {
         return;
