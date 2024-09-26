@@ -5,10 +5,10 @@
     "image_file": "@image_file@",
     "assets_size": "@size@",
     "name_length": "@CONFIG_MMAP_FILE_NAME_LENGTH@",
-    "split_height": "@CONFIG_MMAP_SPLIT_HEIGHT@",
-    "support_spng": @SUPPORT_SPNG@,
-    "support_sjpg": @SUPPORT_SJPG@,
-    "support_qoi": @SUPPORT_QOI@,
-    "support_sqoi": @SUPPORT_SQOI@,
-    "support_format": "@CONFIG_MMAP_FILE_SUPPORT_FORMAT@"
+    "split_height": "@arg_MMAP_SPLIT_HEIGHT@",
+    "support_spng": @support_spng@,
+    "support_sjpg": @support_sjpg@,
+    "support_qoi": @support_qoi@,
+    "support_sqoi": @support_sqoi@,
+    "support_format": "@arg_MMAP_FILE_SUPPORT_FORMAT@"
 }

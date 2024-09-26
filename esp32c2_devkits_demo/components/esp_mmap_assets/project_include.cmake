@@ -3,9 +3,49 @@
 # Create a spiffs image of the specified directory on the host during build and optionally
 # have the created image flashed using `idf.py flash`
 function(spiffs_create_partition_assets partition base_dir)
-    set(options FLASH_IN_PROJECT)
+    # Define option flags (BOOL)
+    set(options FLASH_IN_PROJECT
+                MMAP_SUPPORT_SJPG
+                MMAP_SUPPORT_SPNG
+                MMAP_SUPPORT_QOI
+                MMAP_SUPPORT_SQOI)
+
+    # Define one-value arguments (STRING and INT)
+    set(one_value_args MMAP_FILE_SUPPORT_FORMAT
+                       MMAP_SPLIT_HEIGHT)
+
+    # Define multi-value arguments
     set(multi DEPENDS)
-    cmake_parse_arguments(arg "${options}" "" "${multi}" "${ARGN}")
+
+    # Parse the arguments passed to the function
+    cmake_parse_arguments(arg
+                          "${options}"
+                          "${one_value_args}"
+                          "${multi}"
+                          "${ARGN}")
+
+    if(NOT DEFINED arg_MMAP_FILE_SUPPORT_FORMAT OR arg_MMAP_FILE_SUPPORT_FORMAT STREQUAL "")
+        message(FATAL_ERROR "MMAP_FILE_SUPPORT_FORMAT is empty. Please input the file suffixes you want (e.g .png, .jpg).")
+    endif()
+
+    if(arg_MMAP_SUPPORT_QOI AND (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG))
+        message(FATAL_ERROR "MMAP_SUPPORT_QOI depends on !MMAP_SUPPORT_SJPG && !MMAP_SUPPORT_SPNG.")
+    endif()
+
+    if(arg_MMAP_SUPPORT_SQOI AND NOT arg_MMAP_SUPPORT_QOI)
+        message(FATAL_ERROR "MMAP_SUPPORT_SQOI depends on MMAP_SUPPORT_QOI.")
+    endif()
+
+    if( (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG OR arg_MMAP_SUPPORT_SQOI) AND
+        (NOT DEFINED arg_MMAP_SPLIT_HEIGHT OR arg_MMAP_SPLIT_HEIGHT LESS 1) )
+        message(FATAL_ERROR "MMAP_SPLIT_HEIGHT must be defined and its value >= 1 when MMAP_SUPPORT_SJPG, MMAP_SUPPORT_SPNG, or MMAP_SUPPORT_SQOI is enabled.")
+    endif()
+
+    if(DEFINED arg_MMAP_SPLIT_HEIGHT)
+        if(NOT (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG OR arg_MMAP_SUPPORT_SQOI))
+            message(FATAL_ERROR "MMAP_SPLIT_HEIGHT depends on MMAP_SUPPORT_SJPG || MMAP_SUPPORT_SPNG || MMAP_SUPPORT_SQOI.")
+        endif()
+    endif()
 
     # Try to install Pillow using pip
     idf_build_get_property(python PYTHON)
@@ -66,25 +106,14 @@ function(spiffs_create_partition_assets partition base_dir)
         set(image_file ${CMAKE_BINARY_DIR}/mmap_build/${base_dir_name}/${partition}.bin)
         set(MVMODEL_EXE ${TARGET_COMPONENT_PATH}/spiffs_assets_gen.py)
 
-        set(SUPPORT_VARS SPNG SJPG QOI SQOI)
-        foreach(var IN LISTS SUPPORT_VARS)
-            set(config_var "CONFIG_MMAP_SUPPORT_${var}")
-            set(support_var "SUPPORT_${var}")
-
-            if(NOT DEFINED ${config_var} OR ${config_var} STREQUAL "")
-                set(${config_var} "n")
-            endif()
-
-            if("${${config_var}}" STREQUAL "y")
-                set(${support_var} "true")
-            else()
-                set(${support_var} "false")
-            endif()
-        endforeach()
-
-        if(NOT DEFINED CONFIG_MMAP_SPLIT_HEIGHT OR CONFIG_MMAP_SPLIT_HEIGHT STREQUAL "")
-            set(CONFIG_MMAP_SPLIT_HEIGHT 0)  # Default value
+        if(NOT arg_MMAP_SPLIT_HEIGHT)
+            set(arg_MMAP_SPLIT_HEIGHT 0) # Default value
         endif()
+
+        string(TOLOWER "${arg_MMAP_SUPPORT_SJPG}" support_sjpg)
+        string(TOLOWER "${arg_MMAP_SUPPORT_SPNG}" support_spng)
+        string(TOLOWER "${arg_MMAP_SUPPORT_QOI}" support_qoi)
+        string(TOLOWER "${arg_MMAP_SUPPORT_SQOI}" support_sqoi)
 
         set(CONFIG_FILE_PATH "${CMAKE_CURRENT_BINARY_DIR}/mmap_build/${base_dir_name}/config.json")
         configure_file(

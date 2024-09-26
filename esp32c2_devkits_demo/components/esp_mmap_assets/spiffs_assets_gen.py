@@ -141,7 +141,7 @@ def process_image(input_file, height_str, output_extension, convert_to_qoi=False
 
     save_image(output_file_path, header, split_data)
 
-    # print('Completed, saved as:', os.path.basename(output_file_path), '\n')
+    print('Completed, ', input_filename, '->', os.path.basename(output_file_path))
 
 def convert_image_to_qoi(input_file, height_str):
     process_image(input_file, height_str, '.sqoi', convert_to_qoi=True)

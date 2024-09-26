@@ -17,7 +17,8 @@
 #include "esp_lv_spng.h"
 #include "esp_lv_sqoi.h"
 
-#include "mmap_generate_spiffs_assets.h"
+#include "mmap_generate_Drive_A.h"
+#include "mmap_generate_Drive_B.h"
 
 static const char *TAG = "1_28_ui";
 
@@ -52,8 +53,11 @@ typedef struct {
 static theme_select_t theme_select = THEME_SELECT_CHILD;
 static bool anmi_do_run = true;
 
-static mmap_assets_handle_t asset_handle;
-static esp_lv_fs_handle_t fs_drive_b_handle;
+static mmap_assets_handle_t asset_DriverA_handle;
+static esp_lv_fs_handle_t fs_DriverA_handle;
+
+static mmap_assets_handle_t asset_DriverB_handle;
+static esp_lv_fs_handle_t fs_DriverB_handle;
 
 static esp_lv_spng_decoder_handle_t spng_decoder;
 static esp_lv_sqoi_decoder_handle_t qoi_decoder;
@@ -134,21 +138,22 @@ void ui_1_28_start()
             lv_obj_clear_flag(obj_img_run_particles, LV_OBJ_FLAG_HIDDEN);
 
 #if 0
-            img_dsc_motive.data_size = mmap_assets_get_size(asset_handle, img_ossfet + (list) % MMAP_SPIFFS_ASSETS_FILES);
-            img_dsc_motive.data = mmap_assets_get_mem(asset_handle, img_ossfet + (list) % MMAP_SPIFFS_ASSETS_FILES);
+            img_dsc_motive.data_size = mmap_assets_get_size(asset_DriverA_handle, img_ossfet + (list) % MMAP_SPIFFS_ASSETS_FILES);
+            img_dsc_motive.data = mmap_assets_get_mem(asset_DriverA_handle, img_ossfet + (list) % MMAP_SPIFFS_ASSETS_FILES);
             lv_img_set_src(obj_img_run_particles, &img_dsc_motive);
 #else
             char path[30];
-            sprintf(path, "B:frame_%03d.sqoi", (list) % MMAP_SPIFFS_ASSETS_FILES);
+            if(theme_select%2){
+                sprintf(path, "A:%s", mmap_assets_get_name(asset_DriverA_handle, img_ossfet + (list) % MMAP_DRIVE_A_FILES));
+            } else {
+                sprintf(path, "B:%s", mmap_assets_get_name(asset_DriverB_handle, img_ossfet + (list) % MMAP_DRIVE_B_FILES));
+            }
+            ESP_LOGI("PATH", "%s", path);
             lv_img_set_src(obj_img_run_particles, path);
 #endif
 
             if (fps_count % 10 == 0) {
-#if CONFIG_MMAP_SUPPORT_QOI
-                perfmon_start(0, "PFS", "qoi");
-#else
                 perfmon_start(0, "PFS", "png");
-#endif
                 // printf_stack();
             } else if (fps_count % 10 == 9) {
                 perfmon_end(0, 10);
@@ -164,14 +169,15 @@ void ui_1_28_start()
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 
-    mmap_assets_del(asset_handle);
+    mmap_assets_del(asset_DriverA_handle);
+    mmap_assets_del(asset_DriverB_handle);
     esp_lv_split_png_deinit(spng_decoder);
 }
 
 static void btn_press_left_cb(void *handle, void *arg)
 {
     theme_select = (theme_select + 2) % THEME_MAX_NUM;
-    anmi_do_run = false;
+    anmi_do_run = true;
     ESP_LOGI("BTN", "left:%d", theme_select);
 }
 
@@ -183,30 +189,49 @@ static void btn_press_OK_cb(void *handle, void *arg)
 
 static void btn_press_right_cb(void *handle, void *arg)
 {
-    anmi_do_run = false;
+    anmi_do_run = true;
     theme_select = (theme_select + 1) % THEME_MAX_NUM;
     ESP_LOGI("BTN", "right:%d", theme_select);
 }
 
 static void image_mmap_init()
 {
-    const mmap_assets_config_t config = {
-        .partition_label = "assets",
-        .max_files = MMAP_SPIFFS_ASSETS_FILES,
-        .checksum = MMAP_SPIFFS_ASSETS_CHECKSUM,
+    const mmap_assets_config_t config_DriveA = {
+        .partition_label = "assets_A",
+        .max_files = MMAP_DRIVE_A_FILES,
+        .checksum = MMAP_DRIVE_A_CHECKSUM,
         .flags = {
+            .app_bin_check = true,
             .mmap_enable = true,
             // .mmap_enable = false,
         }
     };
+    ESP_ERROR_CHECK(mmap_assets_new(&config_DriveA, &asset_DriverA_handle));
 
-    ESP_ERROR_CHECK(mmap_assets_new(&config, &asset_handle));
+    const fs_cfg_t fs_cfg_a = {
+        .fs_letter = 'A',
+        .fs_assets = asset_DriverA_handle,
+        .fs_nums = MMAP_DRIVE_A_FILES
+    };
+    esp_lv_fs_desc_init(&fs_cfg_a, &fs_DriverA_handle);
 
+
+    const mmap_assets_config_t config_DriveB = {
+        .partition_label = "assets_B",
+        .max_files = MMAP_DRIVE_B_FILES,
+        .checksum = MMAP_DRIVE_B_CHECKSUM,
+        .flags = {
+            .app_bin_check = true,
+            .mmap_enable = true,
+            // .mmap_enable = false,
+        }
+    };
+    ESP_ERROR_CHECK(mmap_assets_new(&config_DriveB, &asset_DriverB_handle));
 
     const fs_cfg_t fs_cfg_b = {
         .fs_letter = 'B',
-        .fs_assets = asset_handle,
-        .fs_nums = MMAP_SPIFFS_ASSETS_FILES
+        .fs_assets = asset_DriverB_handle,
+        .fs_nums = MMAP_DRIVE_B_FILES
     };
-    esp_lv_fs_desc_init(&fs_cfg_b, &fs_drive_b_handle);
+    esp_lv_fs_desc_init(&fs_cfg_b, &fs_DriverB_handle);
 }

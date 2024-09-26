@@ -3,7 +3,8 @@
 nvs,      data, nvs,     0x9000,  0x6000,
 phy_init, data, phy,     0xf000,  0x1000,
 factory,  app,  factory, 0x10000, 500K,
-assets,   data, spiffs,  ,        3000K,
+assets_A, data, spiffs,  ,        1500K,
+assets_B, data, spiffs,  ,        1500K,
 storage,  data, spiffs,          ,100K, 
 esp_secure_cert,  0x3F, ,        ,        0x2000, encrypted
 fctry,            data, nvs,     ,        0x6000,

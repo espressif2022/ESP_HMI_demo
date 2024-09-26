@@ -15,8 +15,6 @@
 
 #include "lvgl.h"
 
-#include "esp_cpu.h"
-
 #define QOI_IMPLEMENTATION
 #include "qoi.h"
 

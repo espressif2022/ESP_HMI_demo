@@ -26,6 +26,7 @@
 typedef struct {
     uint8_t *raw_spng_data;             //Used when type==SPNG_IO_SOURCE_C_ARRAY.
     uint32_t raw_spng_data_size;        //Num bytes pointed to by raw_spng_data.
+    lv_fs_file_t lv_file;
 } io_source_t;
 
 typedef struct {
@@ -37,6 +38,7 @@ typedef struct {
     int spng_single_frame_height;
     int spng_cache_frame_index;
     uint8_t **frame_base_array;        //to save base address of each split frames upto spng_total_frames.
+    int * frame_base_offset;            //to save base offset for fseek
     uint8_t *frame_cache;
     io_source_t io;
 } SPNG;
@@ -238,10 +240,10 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
     } else if (src_type == LV_IMG_SRC_FILE) {
         const char *fn = src;
         if (strcmp(lv_fs_get_ext(fn), "png") == 0) {
-            uint8_t *png_data = NULL;          /*Pointer to the loaded data. Same as the original file just loaded into the RAM*/
-            size_t png_data_size;       /*Size of `png_data` in bytes*/
+            uint8_t *png_data = NULL;       /*Pointer to the loaded data. Same as the original file just loaded into the RAM*/
+            size_t spng_data_size;          /*Size of `png_data` in bytes*/
 
-            if (png_load_file(fn, &png_data, &png_data_size, true) != LV_FS_RES_OK) {
+            if (png_load_file(fn, &png_data, &spng_data_size, true) != LV_FS_RES_OK) {
                 if (png_data) {
                     lv_mem_free(png_data);
                 }
@@ -254,10 +256,41 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
             header->h = (lv_coord_t)((size[1] & 0xff000000) >> 24) + ((size[1] & 0x00ff0000) >> 8);
             lv_mem_free(png_data);
 
-            return lv_ret;
         } else if (strcmp(lv_fs_get_ext(fn), "spng") == 0) {
-            ESP_LOGW(TAG, "don't support format");
-            return LV_RES_INV;
+
+            uint8_t buff[22];
+            memset(buff, 0, sizeof(buff));
+
+            lv_fs_file_t file;
+            lv_fs_res_t res = lv_fs_open(&file, fn, LV_FS_MODE_RD);
+            if (res != LV_FS_RES_OK) {
+                return 78;
+            }
+
+            uint32_t rn;
+            res = lv_fs_read(&file, buff, 8, &rn);
+            if (res != LV_FS_RES_OK || rn != 8) {
+                lv_fs_close(&file);
+                return LV_RES_INV;
+            }
+
+            if (strcmp((char *)buff, "_SPNG__") == 0) {
+                lv_fs_seek(&file, 14, LV_FS_SEEK_SET);
+                res = lv_fs_read(&file, buff, 4, &rn);
+                if (res != LV_FS_RES_OK || rn != 4) {
+                    lv_fs_close(&file);
+                    return LV_RES_INV;
+                }
+                header->always_zero = 0;
+                header->cf = LV_IMG_CF_TRUE_COLOR_ALPHA;
+                uint8_t * raw_png_data = buff;
+                header->w = *raw_png_data++;
+                header->w |= *raw_png_data++ << 8;
+                header->h = *raw_png_data++;
+                header->h |= *raw_png_data++ << 8;
+                lv_fs_close(&file);
+                return LV_RES_OK;
+            }
         } else {
             return LV_RES_INV;
         }
@@ -375,8 +408,8 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
         uint32_t png_height;
 
         if (strcmp(lv_fs_get_ext(fn), "png") == 0) {
-            uint8_t *png_data;      /*Pointer to the loaded data. Same as the original file just loaded into the RAM*/
-            size_t png_data_size;   /*Size of `png_data` in bytes*/
+            uint8_t *png_data = NULL;   /*Pointer to the loaded data. Same as the original file just loaded into the RAM*/
+            size_t spng_data_size;       /*Size of `png_data` in bytes*/
 
             SPNG *spng = (SPNG *) dsc->user_data;
             if (spng == NULL) {
@@ -390,7 +423,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 dsc->user_data = spng;
             }
 
-            if (png_load_file(fn, &png_data, &png_data_size, false) != LV_FS_RES_OK) {
+            if (png_load_file(fn, &png_data, &spng_data_size, false) != LV_FS_RES_OK) {
                 if (png_data) {
                     lv_mem_free(png_data);
                     lv_spng_cleanup(spng);
@@ -398,7 +431,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 return LV_RES_INV;
             }
 
-            lv_ret = libpng_decode32(&img_data, &png_width, &png_height, png_data, png_data_size);
+            lv_ret = libpng_decode32(&img_data, &png_width, &png_height, png_data, spng_data_size);
             lv_mem_free(png_data);
             if (lv_ret != LV_RES_OK) {
                 ESP_LOGE(TAG, "Decode (libpng_decode32) error:%d", lv_ret);
@@ -416,8 +449,96 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
             }
             return lv_ret;
         } else if (strcmp(lv_fs_get_ext(fn), "spng") == 0) {
-            ESP_LOGW(TAG, "Unsupported file format");
-            return LV_RES_INV;
+            uint8_t *data;
+            uint8_t buff[22];
+            memset(buff, 0, sizeof(buff));
+
+            lv_fs_file_t lv_file;
+            lv_fs_res_t res = lv_fs_open(&lv_file, fn, LV_FS_MODE_RD);
+            if (res != LV_FS_RES_OK) {
+                return 78;
+            }
+
+            uint32_t rn;
+            res = lv_fs_read(&lv_file, buff, 22, &rn);
+            if (res != LV_FS_RES_OK || rn != 22) {
+                lv_fs_close(&lv_file);
+                return LV_RES_INV;
+            }
+
+            if (strcmp((char *)buff, "_SPNG__") == 0) {
+
+                SPNG *spng = (SPNG *)dsc->user_data;
+                if (spng == NULL) {
+                    spng = malloc(sizeof(SPNG));
+                    if (! spng) {
+                        ESP_LOGI(TAG, "Failed to allocate memory for spng");
+                        lv_fs_close(&lv_file);
+                        return LV_RES_INV;
+                    }
+                    memset(spng, 0, sizeof(SPNG));
+                    dsc->user_data = spng;
+                }
+                data = buff;
+                data += 14;
+
+                spng->spng_x_res = *data++;
+                spng->spng_x_res |= *data++ << 8;
+
+                spng->spng_y_res = *data++;
+                spng->spng_y_res |= *data++ << 8;
+
+                spng->spng_total_frames = *data++;
+                spng->spng_total_frames |= *data++ << 8;
+
+                spng->spng_single_frame_height = *data++;
+                spng->spng_single_frame_height |= *data++ << 8;
+
+                ESP_LOGD(TAG, "[%d,%d], frames:%d, height:%d", spng->spng_x_res, spng->spng_y_res, \
+                         spng->spng_total_frames, spng->spng_single_frame_height);
+                spng->frame_base_offset = malloc(sizeof(int *) * spng->spng_total_frames);
+                if (! spng->frame_base_offset) {
+                    ESP_LOGE(TAG, "Not enough memory for frame_base_offset allocation");
+                    lv_spng_cleanup(spng);
+                    spng = NULL;
+                    return LV_RES_INV;
+                }
+
+                int img_frame_start_offset = 22 +  spng->spng_total_frames * 2;
+                spng->frame_base_offset[0] = img_frame_start_offset;
+
+                for (int i = 1; i <  spng->spng_total_frames; i++) {
+                    res = lv_fs_read(&lv_file, buff, 2, &rn);
+                    if (res != LV_FS_RES_OK || rn != 2) {
+                        lv_fs_close(&lv_file);
+                        return LV_RES_INV;
+                    }
+
+                    data = buff;
+                    int offset = *data++;
+                    offset |= *data++ << 8;
+                    spng->frame_base_offset[i] = spng->frame_base_offset[i - 1] + offset;
+                }
+
+                spng->spng_cache_frame_index = -1; //INVALID AT BEGINNING for a forced compare mismatch at first time.
+                spng->frame_cache = (void *)malloc(spng->spng_x_res * spng->spng_single_frame_height * 4);
+                if (!spng->frame_cache) {
+                    ESP_LOGE(TAG, "Not enough memory for frame_cache allocation");
+                    lv_fs_close(&lv_file);
+                    lv_spng_cleanup(spng);
+                    spng = NULL;
+                    return LV_RES_INV;
+                }
+
+                uint32_t total_size;
+                lv_fs_seek(&lv_file, 0, LV_FS_SEEK_END);
+                lv_fs_tell(&lv_file, &total_size);
+                spng->spng_data_size = total_size;
+
+                spng->io.lv_file = lv_file;
+                dsc->img_data = NULL;
+                return lv_ret;
+            }
         } else {
             return LV_RES_INV;
         }
@@ -446,12 +567,7 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
     lv_res_t error;
     uint8_t *img_data = NULL;
 
-    if (dsc->src_type == LV_IMG_SRC_FILE) {
-        ESP_LOGW(TAG, "Unsupported file format");
-        return LV_RES_INV;
-    } else if (dsc->src_type == LV_IMG_SRC_VARIABLE) {
-        SPNG *spng = (SPNG *) dsc->user_data;
-        uint8_t color_depth = 0;
+    uint8_t color_depth = 0;
 
 #if LV_COLOR_DEPTH == 32
         color_depth = 4;
@@ -462,6 +578,65 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
 #elif LV_COLOR_DEPTH == 1
         color_depth = 2;
 #endif
+
+    if (dsc->src_type == LV_IMG_SRC_FILE) {
+        uint32_t rn = 0;
+        lv_fs_res_t res;
+
+        SPNG *spng = (SPNG *) dsc->user_data;
+
+        lv_fs_file_t *lv_file_p = &(spng->io.lv_file);
+        if (!lv_file_p) {
+            ESP_LOGI(TAG, "lv_img_decoder_read_line: lv_file_p");
+            return LV_RES_INV;
+        }
+
+        int png_req_frame_index = y / spng->spng_single_frame_height;
+        /*If line not from cache, refresh cache */
+        if (png_req_frame_index != spng->spng_cache_frame_index) {
+
+            if (png_req_frame_index == (spng->spng_total_frames - 1)) {
+                /*This is the last frame. */
+                spng->io.raw_spng_data_size = spng->spng_data_size - (uint32_t)(spng->frame_base_offset[png_req_frame_index]);
+            } else {
+                spng->io.raw_spng_data_size =
+                    (uint32_t)(spng->frame_base_offset[png_req_frame_index + 1] - (uint32_t)(spng->frame_base_offset[png_req_frame_index]));
+            }
+
+            int next_read_pos = (int)(spng->frame_base_offset [ png_req_frame_index ]);
+            lv_fs_seek(lv_file_p, next_read_pos, LV_FS_SEEK_SET);
+            res = lv_fs_read(lv_file_p, spng->frame_cache, spng->io.raw_spng_data_size, &rn);
+            if (res != LV_FS_RES_OK || rn != spng->io.raw_spng_data_size) {
+                lv_fs_close(lv_file_p);
+                return LV_RES_INV;
+            }
+
+            uint32_t png_width;             /*No used, just required by he decoder*/
+            uint32_t png_height;            /*No used, just required by he decoder*/
+
+            /*Decode the image in ARGB8888 */
+            error = libpng_decode32(&img_data, &png_width, &png_height, spng->frame_cache, rn);
+            if (error != LV_RES_OK) {
+                ESP_LOGE(TAG, "Decode (libpng_decode32) error:%d", error);
+                if (img_data != NULL) {
+                    free(img_data);
+                }
+                return LV_RES_INV;
+            } else {
+                convert_color_depth(img_data,  png_width * png_height);
+                memcpy(spng->frame_cache, img_data, png_width * png_height * color_depth);
+                if (img_data != NULL) {
+                    free(img_data);
+                }
+            }
+            spng->spng_cache_frame_index = png_req_frame_index;
+        }
+
+        uint8_t *cache = (uint8_t *)spng->frame_cache + x * color_depth + (y % spng->spng_single_frame_height) * spng->spng_x_res * color_depth;
+        memcpy(buf, cache, color_depth * len);
+        return LV_RES_OK;
+    } else if (dsc->src_type == LV_IMG_SRC_VARIABLE) {
+        SPNG *spng = (SPNG *) dsc->user_data;
 
         int spng_req_frame_index = y / spng->spng_single_frame_height;
 
@@ -517,6 +692,9 @@ static void decoder_close(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *dsc)
 
     switch (dsc->src_type) {
     case LV_IMG_SRC_FILE:
+        if (spng->io.lv_file.file_d) {
+            lv_fs_close(&(spng->io.lv_file));
+        }
         lv_spng_cleanup(spng);
         break;
 
@@ -593,6 +771,9 @@ static void lv_spng_free(SPNG *spng)
     }
     if (spng->frame_base_array) {
         lv_mem_free(spng->frame_base_array);
+    }
+    if (spng->frame_base_offset) {
+        free(spng->frame_base_offset);
     }
 }
 
