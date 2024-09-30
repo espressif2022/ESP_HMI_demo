@@ -1,0 +1,15 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=5.0"
+  esp_lv_fs:
+    version: "*"
+    override_path: "../components/esp_lv_fs"
+  esp_lv_spng:
+    version: "*"
+    override_path: "../components/esp_lv_spng"
+  esp_lv_sjpg:
+    version: "*"
+    override_path: "../components/esp_lv_sjpg"
+  esp_lv_sqoi:
+    version: "*"
+    override_path: "../components/esp_lv_sqoi"
