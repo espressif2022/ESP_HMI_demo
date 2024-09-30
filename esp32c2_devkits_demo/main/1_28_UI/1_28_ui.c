@@ -166,7 +166,7 @@ void ui_1_28_start()
         lv_refr_now(NULL);
         bsp_display_unlock();
 
-        vTaskDelay(pdMS_TO_TICKS(1));
+        // vTaskDelay(pdMS_TO_TICKS(1));
     }
 
     mmap_assets_del(asset_DriverA_handle);

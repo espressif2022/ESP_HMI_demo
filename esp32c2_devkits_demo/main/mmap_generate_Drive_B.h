@@ -13,58 +13,18 @@
 
 #include "esp_mmap_assets.h"
 
-#define MMAP_DRIVE_B_FILES           50
-#define MMAP_DRIVE_B_CHECKSUM        0x173A
+#define MMAP_DRIVE_B_FILES           10
+#define MMAP_DRIVE_B_CHECKSUM        0xDE7A
 
 enum MMAP_DRIVE_B_LISTS {
-    MMAP_DRIVE_B_FRAME_000_SPNG = 0,        /*!< frame_000.spng */
-    MMAP_DRIVE_B_FRAME_001_SPNG = 1,        /*!< frame_001.spng */
-    MMAP_DRIVE_B_FRAME_002_SPNG = 2,        /*!< frame_002.spng */
-    MMAP_DRIVE_B_FRAME_003_SPNG = 3,        /*!< frame_003.spng */
-    MMAP_DRIVE_B_FRAME_004_SPNG = 4,        /*!< frame_004.spng */
-    MMAP_DRIVE_B_FRAME_005_SPNG = 5,        /*!< frame_005.spng */
-    MMAP_DRIVE_B_FRAME_006_SPNG = 6,        /*!< frame_006.spng */
-    MMAP_DRIVE_B_FRAME_007_SPNG = 7,        /*!< frame_007.spng */
-    MMAP_DRIVE_B_FRAME_008_SPNG = 8,        /*!< frame_008.spng */
-    MMAP_DRIVE_B_FRAME_009_SPNG = 9,        /*!< frame_009.spng */
-    MMAP_DRIVE_B_FRAME_010_SPNG = 10,        /*!< frame_010.spng */
-    MMAP_DRIVE_B_FRAME_011_SPNG = 11,        /*!< frame_011.spng */
-    MMAP_DRIVE_B_FRAME_012_SPNG = 12,        /*!< frame_012.spng */
-    MMAP_DRIVE_B_FRAME_013_SPNG = 13,        /*!< frame_013.spng */
-    MMAP_DRIVE_B_FRAME_014_SPNG = 14,        /*!< frame_014.spng */
-    MMAP_DRIVE_B_FRAME_015_SPNG = 15,        /*!< frame_015.spng */
-    MMAP_DRIVE_B_FRAME_016_SPNG = 16,        /*!< frame_016.spng */
-    MMAP_DRIVE_B_FRAME_017_SPNG = 17,        /*!< frame_017.spng */
-    MMAP_DRIVE_B_FRAME_018_SPNG = 18,        /*!< frame_018.spng */
-    MMAP_DRIVE_B_FRAME_019_SPNG = 19,        /*!< frame_019.spng */
-    MMAP_DRIVE_B_FRAME_020_SPNG = 20,        /*!< frame_020.spng */
-    MMAP_DRIVE_B_FRAME_021_SPNG = 21,        /*!< frame_021.spng */
-    MMAP_DRIVE_B_FRAME_022_SPNG = 22,        /*!< frame_022.spng */
-    MMAP_DRIVE_B_FRAME_023_SPNG = 23,        /*!< frame_023.spng */
-    MMAP_DRIVE_B_FRAME_024_SPNG = 24,        /*!< frame_024.spng */
-    MMAP_DRIVE_B_FRAME_025_SPNG = 25,        /*!< frame_025.spng */
-    MMAP_DRIVE_B_FRAME_026_SPNG = 26,        /*!< frame_026.spng */
-    MMAP_DRIVE_B_FRAME_027_SPNG = 27,        /*!< frame_027.spng */
-    MMAP_DRIVE_B_FRAME_028_SPNG = 28,        /*!< frame_028.spng */
-    MMAP_DRIVE_B_FRAME_029_SPNG = 29,        /*!< frame_029.spng */
-    MMAP_DRIVE_B_FRAME_030_SPNG = 30,        /*!< frame_030.spng */
-    MMAP_DRIVE_B_FRAME_031_SPNG = 31,        /*!< frame_031.spng */
-    MMAP_DRIVE_B_FRAME_032_SPNG = 32,        /*!< frame_032.spng */
-    MMAP_DRIVE_B_FRAME_033_SPNG = 33,        /*!< frame_033.spng */
-    MMAP_DRIVE_B_FRAME_034_SPNG = 34,        /*!< frame_034.spng */
-    MMAP_DRIVE_B_FRAME_035_SPNG = 35,        /*!< frame_035.spng */
-    MMAP_DRIVE_B_FRAME_036_SPNG = 36,        /*!< frame_036.spng */
-    MMAP_DRIVE_B_FRAME_037_SPNG = 37,        /*!< frame_037.spng */
-    MMAP_DRIVE_B_FRAME_038_SPNG = 38,        /*!< frame_038.spng */
-    MMAP_DRIVE_B_FRAME_039_SPNG = 39,        /*!< frame_039.spng */
-    MMAP_DRIVE_B_FRAME_040_SPNG = 40,        /*!< frame_040.spng */
-    MMAP_DRIVE_B_FRAME_041_SPNG = 41,        /*!< frame_041.spng */
-    MMAP_DRIVE_B_FRAME_042_SPNG = 42,        /*!< frame_042.spng */
-    MMAP_DRIVE_B_FRAME_043_SPNG = 43,        /*!< frame_043.spng */
-    MMAP_DRIVE_B_FRAME_044_SPNG = 44,        /*!< frame_044.spng */
-    MMAP_DRIVE_B_FRAME_045_SPNG = 45,        /*!< frame_045.spng */
-    MMAP_DRIVE_B_FRAME_046_SPNG = 46,        /*!< frame_046.spng */
-    MMAP_DRIVE_B_FRAME_047_SPNG = 47,        /*!< frame_047.spng */
-    MMAP_DRIVE_B_FRAME_048_SPNG = 48,        /*!< frame_048.spng */
-    MMAP_DRIVE_B_FRAME_049_SPNG = 49,        /*!< frame_049.spng */
+    MMAP_DRIVE_B_FRAME_000_BIN = 0,        /*!< frame_000.bin */
+    MMAP_DRIVE_B_FRAME_001_BIN = 1,        /*!< frame_001.bin */
+    MMAP_DRIVE_B_FRAME_002_BIN = 2,        /*!< frame_002.bin */
+    MMAP_DRIVE_B_FRAME_003_BIN = 3,        /*!< frame_003.bin */
+    MMAP_DRIVE_B_FRAME_004_BIN = 4,        /*!< frame_004.bin */
+    MMAP_DRIVE_B_FRAME_005_BIN = 5,        /*!< frame_005.bin */
+    MMAP_DRIVE_B_FRAME_006_BIN = 6,        /*!< frame_006.bin */
+    MMAP_DRIVE_B_FRAME_007_BIN = 7,        /*!< frame_007.bin */
+    MMAP_DRIVE_B_FRAME_008_BIN = 8,        /*!< frame_008.bin */
+    MMAP_DRIVE_B_FRAME_009_BIN = 9,        /*!< frame_009.bin */
 };

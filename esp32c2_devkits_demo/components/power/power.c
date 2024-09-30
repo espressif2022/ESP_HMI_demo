@@ -103,31 +103,31 @@ int get_power_value(void)
  */
 static bool adc_calibration_init(adc_unit_t unit, adc_channel_t channel, adc_atten_t atten, adc_cali_handle_t *out_handle)
 {
-    adc_cali_handle_t handle = NULL;
-    esp_err_t ret = ESP_FAIL;
+    // adc_cali_handle_t handle = NULL;
+    // esp_err_t ret = ESP_FAIL;
     bool calibrated = false;
 
-    if (!calibrated) {
-        adc_cali_line_fitting_config_t cali_config = {
-            .unit_id = unit,
-            // .chan = channel,
-            .atten = atten,
-            .bitwidth = ADC_BITWIDTH_DEFAULT,
-        };
-        ret = adc_cali_create_scheme_line_fitting(&cali_config, &handle);
-        if (ret == ESP_OK) {
-            calibrated = true;
-        }
-    }
+    // if (!calibrated) {
+    //     adc_cali_line_fitting_config_t cali_config = {
+    //         .unit_id = unit,
+    //         // .chan = channel,
+    //         .atten = atten,
+    //         .bitwidth = ADC_BITWIDTH_DEFAULT,
+    //     };
+    //     ret = adc_cali_create_scheme_line_fitting(&cali_config, &handle);
+    //     if (ret == ESP_OK) {
+    //         calibrated = true;
+    //     }
+    // }
 
-    *out_handle = handle;
-    if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "Calibration Success");
-    } else if (ret == ESP_ERR_NOT_SUPPORTED || !calibrated) {
-        ESP_LOGW(TAG, "eFuse not burnt, skip software calibration");
-    } else {
-        ESP_LOGE(TAG, "Invalid arg or no memory");
-    }
+    // *out_handle = handle;
+    // if (ret == ESP_OK) {
+    //     ESP_LOGI(TAG, "Calibration Success");
+    // } else if (ret == ESP_ERR_NOT_SUPPORTED || !calibrated) {
+    //     ESP_LOGW(TAG, "eFuse not burnt, skip software calibration");
+    // } else {
+    //     ESP_LOGE(TAG, "Invalid arg or no memory");
+    // }
 
     return calibrated;
 }

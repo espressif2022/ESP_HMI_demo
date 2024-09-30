@@ -8,11 +8,16 @@ function(spiffs_create_partition_assets partition base_dir)
                 MMAP_SUPPORT_SJPG
                 MMAP_SUPPORT_SPNG
                 MMAP_SUPPORT_QOI
-                MMAP_SUPPORT_SQOI)
+                MMAP_SUPPORT_SQOI
+                MMAP_SUPPORT_RAW
+                MMAP_RAW_DITHER
+                MMAP_RAW_BGR_MODE)
 
     # Define one-value arguments (STRING and INT)
     set(one_value_args MMAP_FILE_SUPPORT_FORMAT
-                       MMAP_SPLIT_HEIGHT)
+                       MMAP_SPLIT_HEIGHT
+                       MMAP_RAW_FILE_FORMAT
+                       MMAP_RAW_COLOR_FORMAT)
 
     # Define multi-value arguments
     set(multi DEPENDS)
@@ -47,6 +52,10 @@ function(spiffs_create_partition_assets partition base_dir)
         endif()
     endif()
 
+    if(arg_MMAP_SUPPORT_RAW AND (arg_MMAP_SUPPORT_SJPG OR arg_MMAP_SUPPORT_SPNG OR arg_MMAP_SUPPORT_QOI OR arg_MMAP_SUPPORT_SQOI))
+        message(FATAL_ERROR "MMAP_SUPPORT_RAW and MMAP_SUPPORT_SJPG/MMAP_SUPPORT_SPNG/MMAP_SUPPORT_QOI/MMAP_SUPPORT_SQOI cannot be enabled at the same time.")
+    endif()
+
     # Try to install Pillow using pip
     idf_build_get_property(python PYTHON)
     execute_process(
@@ -77,6 +86,35 @@ function(spiffs_create_partition_assets partition base_dir)
         endif()
     endif()
 
+    # Try to install qoi-conv using pip
+    execute_process(
+        COMMAND ${python} -c "import importlib; importlib.import_module('qoi-conv')"
+        RESULT_VARIABLE PIL_FOUND
+        OUTPUT_QUIET
+        ERROR_QUIET
+    )
+
+    if(PIL_FOUND EQUAL 0)
+        message(STATUS "qoi-conv is installed.")
+    else()
+        message(STATUS "qoi-conv not found. Attempting to install it using pip...")
+
+        execute_process(
+            COMMAND ${python} -m pip install -U qoi-conv
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE error
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_STRIP_TRAILING_WHITESPACE
+        )
+
+        if(result)
+            message(FATAL_ERROR "Failed to install qoi-conv using pip. Please install it manually.\nError: ${error}")
+        else()
+            message(STATUS "qoi-conv successfully installed.")
+        endif()
+    endif()
+
     get_filename_component(base_dir_full_path ${base_dir} ABSOLUTE)
     get_filename_component(base_dir_name "${base_dir_full_path}" NAME)
 
@@ -100,11 +138,32 @@ function(spiffs_create_partition_assets partition base_dir)
             message(FATAL_ERROR "Component 'esp_mmap_assets' not found.")
         else()
             idf_component_get_property(TARGET_COMPONENT_PATH ${TARGET_COMPONENT} COMPONENT_DIR)
-            message(STATUS "Component dir: ${TARGET_COMPONENT_PATH}")
         endif()
 
         set(image_file ${CMAKE_BINARY_DIR}/mmap_build/${base_dir_name}/${partition}.bin)
         set(MVMODEL_EXE ${TARGET_COMPONENT_PATH}/spiffs_assets_gen.py)
+
+        if(arg_MMAP_SUPPORT_RAW)
+            foreach(COMPONENT ${build_components})
+            if(COMPONENT MATCHES "^lvgl$" OR COMPONENT MATCHES "^lvgl__lvgl$")
+                set(lvgl_name ${COMPONENT})
+                if(COMPONENT STREQUAL "lvgl")
+                    set(lvgl_ver $ENV{LVGL_VERSION})
+                else()
+                    idf_component_get_property(lvgl_ver ${lvgl_name} COMPONENT_VERSION)
+                endif()
+                break()
+            endif()
+            endforeach()
+
+            if("${lvgl_ver}" STREQUAL "")
+                message("Could not determine LVGL version, assuming v8.x")
+                set(lvgl_ver "8.0.0")
+            endif()
+            message(STATUS "LVGL version: ${lvgl_ver}")
+        endif()
+
+        set(lvgl_ver "8.0.0")
 
         if(NOT arg_MMAP_SPLIT_HEIGHT)
             set(arg_MMAP_SPLIT_HEIGHT 0) # Default value
@@ -114,8 +173,11 @@ function(spiffs_create_partition_assets partition base_dir)
         string(TOLOWER "${arg_MMAP_SUPPORT_SPNG}" support_spng)
         string(TOLOWER "${arg_MMAP_SUPPORT_QOI}" support_qoi)
         string(TOLOWER "${arg_MMAP_SUPPORT_SQOI}" support_sqoi)
+        string(TOLOWER "${arg_MMAP_SUPPORT_RAW}" support_raw)
+        string(TOLOWER "${arg_MMAP_RAW_DITHER}" support_raw_dither)
+        string(TOLOWER "${arg_MMAP_RAW_BGR_MODE}" support_raw_bgr)
 
-        set(CONFIG_FILE_PATH "${CMAKE_CURRENT_BINARY_DIR}/mmap_build/${base_dir_name}/config.json")
+        set(CONFIG_FILE_PATH "${CMAKE_BINARY_DIR}/mmap_build/${base_dir_name}/config.json")
         configure_file(
             "${TARGET_COMPONENT_PATH}/config_template.json.in"
             "${CONFIG_FILE_PATH}"
