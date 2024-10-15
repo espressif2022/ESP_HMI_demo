@@ -382,7 +382,6 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 int offset = *data++;
                 offset |= *data++ << 8;
                 sjpg->frame_base_array[i] = sjpg->frame_base_array[i - 1] + offset;
-                ESP_LOGI(TAG,"variable offset:%d", offset);
             }
             sjpg->sjpg_cache_frame_index = -1;
             sjpg->frame_cache = (void *)malloc(sjpg->sjpg_x_res * sjpg->sjpg_single_frame_height * 4);
@@ -531,7 +530,6 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                     int offset = *data++;
                     offset |= *data++ << 8;
                     sjpg->frame_base_offset[i] = sjpg->frame_base_offset[i - 1] + offset;
-                    ESP_LOGI(TAG,"srcfile offset:%d", offset);
                 }
                     
                 sjpg->sjpg_cache_frame_index = -1;
@@ -616,23 +614,6 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
             int next_read_pos = (int)(sjpg->frame_base_offset [ jpg_req_frame_index ]);
             lv_fs_seek(lv_file_p, next_read_pos, LV_FS_SEEK_SET);
             res = lv_fs_read(lv_file_p, sjpg->frame_cache, sjpg->io.raw_sjpg_data_size, &rn);
-            
-            ESP_LOGI(TAG, "rn: %ld", rn);
-
-            uint32_t srcfile_check_sum = 0;
-            for (uint32_t i = 0; i < sjpg->io.raw_sjpg_data_size; i++)
-            {
-                srcfile_check_sum = srcfile_check_sum + sjpg->frame_cache[i];
-            }
-            ESP_LOGI(TAG,"srcfile_check_sum:%ld",srcfile_check_sum);
-
-            /*Print the front 10 byte*/ 
-            uint32_t i=0;
-            for ( i = 0; i < 10; i++)
-            {
-                printf("%x ",sjpg->frame_cache[i]);
-            }
-            printf("\n");
 
             if (res != LV_FS_RES_OK || rn != sjpg->io.raw_sjpg_data_size) {
                 lv_fs_close(lv_file_p);
@@ -652,7 +633,6 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
                 if (img_data != NULL) {
                     free(img_data);
                 }
-                ESP_LOGI(TAG,"okkkkkkk");
             }
             sjpg->sjpg_cache_frame_index = jpg_req_frame_index;
         }
@@ -677,26 +657,7 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
                     (uint32_t)(sjpg->frame_base_array[sjpg_req_frame_index + 1] - sjpg->io.raw_sjpg_data);
             }
 
-            lv_img_header_t header;             /*No used, just required by the decoder*/
-
-            ESP_LOGI(TAG,"raw_sjpg_data_size:%ld",sjpg->io.raw_sjpg_data_size); 
-
-            uint32_t variable_check_sum = 0;
-            for (uint32_t i = 0; i < sjpg->io.raw_sjpg_data_size; i++)
-            {
-                variable_check_sum = variable_check_sum + sjpg->io.raw_sjpg_data[i];
-            }
-            ESP_LOGI(TAG,"variable_check_sum:%ld",variable_check_sum);
-            
-
-            /*Print the front 10 byte*/ 
-            uint32_t i=0;
-            for ( i = 0; i < 10; i++)
-            {
-                printf("%x ",sjpg->io.raw_sjpg_data[i]);
-            }
-            printf("\n");
-            
+            lv_img_header_t header;             /*No used, just required by the decoder*/ 
             error = decode_jpeg(sjpg->io.raw_sjpg_data, sjpg->io.raw_sjpg_data_size, &header, &img_data);
             if (error != LV_RES_OK) {
                 ESP_LOGE(TAG, "Decode (esp_jpg) error:%d, %d", error, __LINE__);
