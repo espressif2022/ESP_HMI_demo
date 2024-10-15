@@ -73,9 +73,10 @@ def download_v8_script(convert_path):
             try:
                 subprocess.run(
                     ['git', 'clone', 'https://github.com/W-Mai/lvgl_image_converter.git', convert_path],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
                     check=True
                 )
-                print(f"Successfully cloned lvgl_image_converter")
             except subprocess.CalledProcessError as e:
                 print(f"Git clone failed: {e}")
                 sys.exit(1)
@@ -89,7 +90,6 @@ def download_v8_script(convert_path):
                     stderr=subprocess.DEVNULL,
                     check=True
                 )
-                print(f"Successfully checked out to '9174634e9dcc1b21a63668969406897aad650f35'")
             except subprocess.CalledProcessError as e:
                 print(f"Failed to checkout to the specific commit: {e}")
                 sys.exit(1)
@@ -158,8 +158,12 @@ def split_image(im, block_size, input_dir, ext, convert_to_qoi):
 
         if convert_to_qoi:
             with Image.open(output_path) as img:
+                if img.mode != 'RGBA':
+                    img = img.convert('RGBA')
+
+                img_data = np.asarray(img)
                 out_path = qoi_module.replace_extension(output_path, 'qoi')
-                new_image = qoi_module.Qoi().save(out_path, np.asarray(img))
+                new_image = qoi_module.Qoi().save(out_path, img_data)
                 os.remove(output_path)
 
 
@@ -356,7 +360,7 @@ def convert_image_to_raw(input_file: str) -> None:
     """
     input_dir, input_filename = os.path.split(input_file)
     _, ext = os.path.splitext(input_filename)
-    convert_path = os.path.join(os.path.dirname(os.path.dirname(input_file)), 'lvgl_image_converter')
+    convert_path = os.path.join(os.path.dirname(input_file), 'lvgl_image_converter')
     lvgl_ver_str = config_data.get('lvgl_ver', '9.0.0')
 
     try:
@@ -393,7 +397,7 @@ def pack_assets(config: PackModelsConfig):
 
     merged_data = bytearray()
     file_info_list = []
-    skip_files = ['config.json']
+    skip_files = ['config.json', 'lvgl_image_converter']
 
     file_list = sorted(os.listdir(target_path), key=sort_key)
     for filename in file_list:
@@ -570,7 +574,7 @@ if __name__ == '__main__':
     if copy_config.spng_enable or copy_config.sjpg_enable or copy_config.sqoi_enable:
         print('--split_height:', copy_config.split_height)
     if copy_config.row_enable:
-        print('--lvgl_ver:', config_data['lvgl_ver'])
+        print('--lvgl_version:', config_data['lvgl_ver'])
 
     if os.path.isfile(image_file):
         os.remove(image_file)

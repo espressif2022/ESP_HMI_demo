@@ -19,14 +19,16 @@
 #include "esp_lv_spng.h"
 #include "esp_lv_sqoi.h"
 
-#include "mmap_generate_Drive_1.h"
-#include "mmap_generate_Drive_2.h"
-#include "mmap_generate_Drive_3.h"
-#include "mmap_generate_Drive_4.h"
-#include "mmap_generate_Drive_5.h"
-#include "mmap_generate_Drive_6.h"
-#include "mmap_generate_Drive_7.h"
-#include "mmap_generate_Drive_10.h"
+#include "mmap_generate_Drive_A.h"
+#include "mmap_generate_Drive_B.h"
+#include "mmap_generate_Drive_C.h"
+#include "mmap_generate_Drive_D.h"
+#include "mmap_generate_Drive_E.h"
+#include "mmap_generate_Drive_F.h"
+#include "mmap_generate_Drive_G.h"
+#include "mmap_generate_Drive_H.h"
+#include "mmap_generate_Drive_I.h"
+#include "mmap_generate_Drive_J.h"
 
 static const char *TAG = "perf_decoder";
 
@@ -35,8 +37,8 @@ static const char *TAG = "perf_decoder";
 #define MAX_COUNTERS        3
 #define TEST_COUNTERS       1
 
-#define PARTITION_NUM       8
-//#define variable_test       0
+#define PARTITION_NUM       10
+
 static lv_disp_drv_t *lv_disp_drv = NULL;
 static lv_disp_draw_buf_t *lv_disp_buf = NULL;
 static SemaphoreHandle_t lv_flush_sync_sem;
@@ -60,14 +62,16 @@ typedef struct {
 static PerfCounter perf_counters[MAX_COUNTERS] = {0};
 
 static const asset_config_data_t asset_configs[PARTITION_NUM] = {
-    {"assets_1", MMAP_DRIVE_1_FILES, MMAP_DRIVE_1_CHECKSUM},
-    {"assets_2", MMAP_DRIVE_2_FILES, MMAP_DRIVE_2_CHECKSUM},
-    {"assets_3", MMAP_DRIVE_3_FILES, MMAP_DRIVE_3_CHECKSUM},
-    {"assets_4", MMAP_DRIVE_4_FILES, MMAP_DRIVE_4_CHECKSUM},
-    {"assets_5", MMAP_DRIVE_5_FILES, MMAP_DRIVE_5_CHECKSUM},
-    {"assets_6", MMAP_DRIVE_6_FILES, MMAP_DRIVE_6_CHECKSUM},
-    {"assets_7", MMAP_DRIVE_7_FILES, MMAP_DRIVE_7_CHECKSUM},
-    {"assets_10", MMAP_DRIVE_10_FILES, MMAP_DRIVE_10_CHECKSUM},
+    {"assets_A", MMAP_DRIVE_A_FILES, MMAP_DRIVE_A_CHECKSUM},
+    {"assets_B", MMAP_DRIVE_B_FILES, MMAP_DRIVE_B_CHECKSUM},
+    {"assets_C", MMAP_DRIVE_C_FILES, MMAP_DRIVE_C_CHECKSUM},
+    {"assets_D", MMAP_DRIVE_D_FILES, MMAP_DRIVE_D_CHECKSUM},
+    {"assets_E", MMAP_DRIVE_E_FILES, MMAP_DRIVE_E_CHECKSUM},
+    {"assets_F", MMAP_DRIVE_F_FILES, MMAP_DRIVE_F_CHECKSUM},
+    {"assets_G", MMAP_DRIVE_G_FILES, MMAP_DRIVE_G_CHECKSUM},
+    {"assets_H", MMAP_DRIVE_H_FILES, MMAP_DRIVE_H_CHECKSUM},
+    {"assets_I", MMAP_DRIVE_I_FILES, MMAP_DRIVE_I_CHECKSUM},
+    {"assets_J", MMAP_DRIVE_J_FILES, MMAP_DRIVE_J_CHECKSUM},
 };
 
 static void perfmon_start(int ctr, const char* fmt1, const char* fmt2, ...)
@@ -84,7 +88,7 @@ static void perfmon_start(int ctr, const char* fmt1, const char* fmt2, ...)
 static void perfmon_end(int ctr, int count)
 {
     perf_counters[ctr].acc = esp_timer_get_time() - perf_counters[ctr].start;
-    printf("Perf ctr[%d], [%15s][%15s]: %.2f ms\n",
+    printf("Perf ctr[%d], [%-15s][%-15s]: %.2f ms\n",
            ctr, perf_counters[ctr].str1, perf_counters[ctr].str2, ((float)perf_counters[ctr].acc / count) / 1000);
 }
 
@@ -118,7 +122,7 @@ esp_err_t test_mmap_drive_del(void)
     return ESP_OK;
 }
 
-esp_err_t test_flash_fs_new(void)
+esp_err_t test_flash_add_lv_fs(void)
 {
     fs_cfg_t fs_cfg;
 
@@ -136,7 +140,7 @@ esp_err_t test_flash_fs_new(void)
     return ESP_OK;
 }
 
-esp_err_t test_flash_fs_del(void)
+esp_err_t test_flash_del_lv_fs(void)
 {
     for (int i = 0; i < PARTITION_NUM; i++) {
         esp_err_t ret = esp_lv_fs_desc_deinit(fs_drive_handle[i]);
@@ -227,7 +231,7 @@ void test_perf_decoder_fs_esp(void)
 
     test_lvgl_add_disp();
 
-    esp_err_t ret_fs = test_flash_fs_new();
+    esp_err_t ret_fs = test_flash_add_lv_fs();
     if (ret_fs != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize flash FS");
         return;
@@ -264,17 +268,11 @@ void test_perf_decoder_fs_esp(void)
 RETRY:
     //char path[30];
     for (int list = 0; list < PARTITION_NUM; list++) {
-        // snprintf(path, sizeof(path), "%c:%s", 'A' + list, mmap_assets_get_name(mmap_drive_handle[list], 0));
-        //     ESP_LOGI(TAG, "PATH: %s", path);
-        #ifdef variable_test
-            static lv_img_dsc_t img_dsc;
-            img_dsc.data_size = test_assets_get_size(MMAP_DRIVE_7_NAVI_52_SJPG);
-            img_dsc.data = test_assets_get_mem(MMAP_DRIVE_7_NAVI_52_SJPG);
-            test_performance_run(img, 0, "variable", "decoder", (const void *)&img_dsc);
-        #else
-            test_performance_run(img, 0, "mmap_enable", "decoder", "G:navi_52.sjpg");
-        #endif
-        vTaskDelay(pdMS_TO_TICKS(3000));
+        for(int i = 0; i< mmap_assets_get_stored_files(mmap_drive_handle[list]); i++){
+            snprintf(path, sizeof(path), "%c:%s", 'A' + list, mmap_assets_get_name(mmap_drive_handle[list], i));
+            test_performance_run(img, 0, path, "decoder", path);
+            vTaskDelay(pdMS_TO_TICKS(3000));
+        }
     }
     goto RETRY;
 
@@ -283,7 +281,7 @@ RETRY:
     esp_lv_split_qoi_deinit(sqoi_decoder);
 
     test_lvgl_del_disp();
-    test_flash_fs_del();
+    test_flash_del_lv_fs();
 }
 
 void app_main(void)

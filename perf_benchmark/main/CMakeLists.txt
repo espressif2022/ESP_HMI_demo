@@ -6,17 +6,17 @@ idf_component_register(
 set(DIR_JPG "../assets_jpg")
 set(DIR_PNG "../assets_png")
 
-set(Drive_PNG_PNG   "${CMAKE_BINARY_DIR}/Drive_1")
-set(Drive_PNG_SPNG  "${CMAKE_BINARY_DIR}/Drive_2")
-set(Drive_PNG_QOI   "${CMAKE_BINARY_DIR}/Drive_3")
-set(Drive_PNG_SQOI  "${CMAKE_BINARY_DIR}/Drive_4")
-set(Drive_PNG_RAW   "${CMAKE_BINARY_DIR}/Drive_5")
+set(Drive_PNG_PNG   "${CMAKE_BINARY_DIR}/Drive_A")
+set(Drive_PNG_SPNG  "${CMAKE_BINARY_DIR}/Drive_B")
+set(Drive_PNG_QOI   "${CMAKE_BINARY_DIR}/Drive_C")
+set(Drive_PNG_SQOI  "${CMAKE_BINARY_DIR}/Drive_D")
+set(Drive_PNG_RAW   "${CMAKE_BINARY_DIR}/Drive_E")
 
-set(Drive_JPG_JPG   "${CMAKE_BINARY_DIR}/Drive_6")
-set(Drive_JPG_SJPG  "${CMAKE_BINARY_DIR}/Drive_7")
-set(Drive_JPG_QOI   "${CMAKE_BINARY_DIR}/Drive_8")
-set(Drive_JPG_SQOI  "${CMAKE_BINARY_DIR}/Drive_9")
-set(Drive_JPG_RAW   "${CMAKE_BINARY_DIR}/Drive_10")
+set(Drive_JPG_JPG   "${CMAKE_BINARY_DIR}/Drive_F")
+set(Drive_JPG_SJPG  "${CMAKE_BINARY_DIR}/Drive_G")
+set(Drive_JPG_QOI   "${CMAKE_BINARY_DIR}/Drive_H")
+set(Drive_JPG_SQOI  "${CMAKE_BINARY_DIR}/Drive_I")
+set(Drive_JPG_RAW   "${CMAKE_BINARY_DIR}/Drive_J")
 
 file(MAKE_DIRECTORY ${Drive_PNG_PNG})
 file(MAKE_DIRECTORY ${Drive_PNG_SPNG})
@@ -49,13 +49,13 @@ foreach(FILE ${SOURCE_FILES})
 endforeach()
 
 spiffs_create_partition_assets(
-    assets_1 
+    assets_A 
     ${Drive_PNG_PNG}
     FLASH_IN_PROJECT
     MMAP_FILE_SUPPORT_FORMAT ".png"
 )
 spiffs_create_partition_assets(
-    assets_2
+    assets_B
     ${Drive_PNG_SPNG}
     FLASH_IN_PROJECT
     MMAP_FILE_SUPPORT_FORMAT ".png"
@@ -63,14 +63,14 @@ spiffs_create_partition_assets(
     MMAP_SPLIT_HEIGHT 16
 )
 spiffs_create_partition_assets(
-    assets_3
+    assets_C
     ${Drive_PNG_QOI}
     FLASH_IN_PROJECT
     MMAP_FILE_SUPPORT_FORMAT ".png"
     MMAP_SUPPORT_QOI
 )
 spiffs_create_partition_assets(
-    assets_4
+    assets_D
     ${Drive_PNG_SQOI}
     FLASH_IN_PROJECT
     MMAP_FILE_SUPPORT_FORMAT ".png"
@@ -79,7 +79,7 @@ spiffs_create_partition_assets(
     MMAP_SPLIT_HEIGHT 16
 )
 spiffs_create_partition_assets(
-    assets_5
+    assets_E
     ${Drive_PNG_RAW}
     FLASH_IN_PROJECT
     MMAP_FILE_SUPPORT_FORMAT ".png"
@@ -91,13 +91,13 @@ spiffs_create_partition_assets(
 )
 
 spiffs_create_partition_assets(
-    assets_6
+    assets_F
     ${Drive_JPG_JPG}
     FLASH_IN_PROJECT
     MMAP_FILE_SUPPORT_FORMAT ".jpg"
 )
 spiffs_create_partition_assets(
-    assets_7
+    assets_G
     ${Drive_JPG_SJPG}
     FLASH_IN_PROJECT
     MMAP_FILE_SUPPORT_FORMAT ".jpg"
@@ -105,23 +105,23 @@ spiffs_create_partition_assets(
     MMAP_SPLIT_HEIGHT 16
 )
 spiffs_create_partition_assets(
-    assets_8
+    assets_H
     ${Drive_JPG_QOI}
     FLASH_IN_PROJECT
     MMAP_FILE_SUPPORT_FORMAT ".jpg"
     MMAP_SUPPORT_QOI
 )
 spiffs_create_partition_assets(
-    assets_9
+    assets_I
     ${Drive_JPG_SQOI}
     FLASH_IN_PROJECT
     MMAP_FILE_SUPPORT_FORMAT ".jpg"
     MMAP_SUPPORT_QOI
     MMAP_SUPPORT_SQOI
-    MMAP_SPLIT_HEIGHT 4
+    MMAP_SPLIT_HEIGHT 16
 )
 spiffs_create_partition_assets(
-    assets_10
+    assets_J
     ${Drive_JPG_RAW}
     FLASH_IN_PROJECT
     MMAP_FILE_SUPPORT_FORMAT ".jpg"
