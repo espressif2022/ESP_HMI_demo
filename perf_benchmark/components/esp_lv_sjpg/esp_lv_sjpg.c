@@ -33,6 +33,7 @@ static char *TAG = "JPG";
 typedef struct {
     uint8_t *raw_sjpg_data;             //Used when type==SJPG_IO_SOURCE_C_ARRAY.
     uint32_t raw_sjpg_data_size;        //Num bytes pointed to by raw_sjpg_data.
+    lv_fs_file_t lv_file;
 } io_source_t;
 
 typedef struct {
@@ -44,6 +45,7 @@ typedef struct {
     int sjpg_single_frame_height;
     int sjpg_cache_frame_index;
     uint8_t **frame_base_array;        //to save base address of each split frames upto sjpg_total_frames.
+    int * frame_base_offset;  
     uint8_t *frame_cache;
     io_source_t io;
 } SJPEG;
@@ -176,7 +178,7 @@ static lv_res_t decode_jpeg(const uint8_t *input_buffer, uint32_t input_size, lv
             free(out_info);
         }
         jpeg_dec_close(jpeg_dec);
-        ESP_LOGE(TAG, "Failed to allocate memory for jpeg decoder");
+        ESP_LOGE(TAG, "Failed to allocate mecoordinatesmory for jpeg decoder");
         return LV_RES_INV;
     }
 
@@ -207,6 +209,7 @@ static lv_res_t decode_jpeg(const uint8_t *input_buffer, uint32_t input_size, lv
                 free(out_info);
                 jpeg_dec_close(jpeg_dec);
                 ESP_LOGE(TAG, "Failed to decode jpeg");
+                ESP_LOGE(TAG, "ret:%d", ret);
                 return LV_RES_INV;
             }
         }
@@ -227,6 +230,7 @@ static lv_res_t decode_jpeg(const uint8_t *input_buffer, uint32_t input_size, lv
 
 static lv_res_t decoder_info(lv_img_decoder_t *decoder, const void *src, lv_img_header_t *header)
 {
+    
     LV_UNUSED(decoder);
     lv_img_src_t src_type = lv_img_src_get_type(src);
     lv_res_t lv_ret = LV_RES_OK;
@@ -277,8 +281,42 @@ static lv_res_t decoder_info(lv_img_decoder_t *decoder, const void *src, lv_img_
 
             return lv_ret;
         } else if (strcmp(lv_fs_get_ext(fn), "sjpg") == 0) {
-            ESP_LOGW(TAG, "don't support format");
-            return LV_RES_INV;
+
+            uint8_t buff[22];
+            memset(buff, 0, sizeof(buff));
+
+            lv_fs_file_t file;
+            lv_fs_res_t res = lv_fs_open(&file, fn, LV_FS_MODE_RD);
+            if (res != LV_FS_RES_OK) {
+                return 78;
+            }
+
+            uint32_t rn;
+            res = lv_fs_read(&file, buff, 8, &rn);
+            if (res != LV_FS_RES_OK || rn != 8) {
+                lv_fs_close(&file);
+                return LV_RES_INV;
+            }
+
+            if (strcmp((char *)buff, "_SJPG__") == 0) {
+                lv_fs_seek(&file, 14, LV_FS_SEEK_SET);
+                res = lv_fs_read(&file, buff, 4, &rn);
+                if (res != LV_FS_RES_OK || rn != 4) {
+                    lv_fs_close(&file);
+                    return LV_RES_INV;
+                }
+                header->always_zero = 0;
+                header->cf = LV_IMG_CF_TRUE_COLOR_ALPHA;
+                uint8_t * raw_jpg_data = buff;
+                header->w = *raw_jpg_data++;
+                header->w |= *raw_jpg_data++ << 8;
+                header->h = *raw_jpg_data++;
+                header->h |= *raw_jpg_data++ << 8;
+                lv_fs_close(&file);
+                return LV_RES_OK;
+            }
+            // ESP_LOGW(TAG, "don't support format");
+            // return LV_RES_INV;
         } else {
             return LV_RES_INV;
         }
@@ -326,7 +364,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
             sjpg->sjpg_single_frame_height = *data++;
             sjpg->sjpg_single_frame_height |= *data++ << 8;
 
-            ESP_LOGD(TAG, "[%d,%d], frames:%d, height:%d", sjpg->sjpg_x_res, sjpg->sjpg_y_res, \
+            ESP_LOGI(TAG, "[%d,%d], frames:%d, height:%d", sjpg->sjpg_x_res, sjpg->sjpg_y_res, \
                      sjpg->sjpg_total_frames, sjpg->sjpg_single_frame_height);
 
             sjpg->frame_base_array = malloc(sizeof(uint8_t *) * sjpg->sjpg_total_frames);
@@ -344,6 +382,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 int offset = *data++;
                 offset |= *data++ << 8;
                 sjpg->frame_base_array[i] = sjpg->frame_base_array[i - 1] + offset;
+                ESP_LOGI(TAG,"variable offset:%d", offset);
             }
             sjpg->sjpg_cache_frame_index = -1;
             sjpg->frame_cache = (void *)malloc(sjpg->sjpg_x_res * sjpg->sjpg_single_frame_height * 4);
@@ -368,7 +407,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 if (output_buffer) {
                     free(output_buffer);
                 }
-                ESP_LOGE(TAG, "Decode (esp_jpg) error:%d", lv_ret);
+                ESP_LOGE(TAG, "Decode (esp_jpg) error:%d, %d", lv_ret, __LINE__);
                 lv_sjpg_cleanup(sjpg);
                 sjpg = NULL;
             }
@@ -413,7 +452,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 dsc->img_data = output_buffer;
                 jpg->frame_cache = output_buffer;
             } else {
-                ESP_LOGE(TAG, "Decode (esp_jpg) error:%d", lv_ret);
+                ESP_LOGE(TAG, "Decode (esp_jpg) error:%d, %d", lv_ret, __LINE__);
                 if (output_buffer) {
                     free(output_buffer);
                 }
@@ -423,8 +462,96 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
 
             return lv_ret;
         } else if (strcmp(lv_fs_get_ext(fn), "sjpg") == 0) {
-            ESP_LOGW(TAG, "Unsupported file format");
-            return LV_RES_INV;
+            uint8_t *data;
+            uint8_t buff[22];
+            memset(buff, 0, sizeof(buff));
+
+            lv_fs_file_t lv_file;
+            lv_fs_res_t res = lv_fs_open(&lv_file, fn, LV_FS_MODE_RD);
+            if (res != LV_FS_RES_OK) {
+                return 78;
+            }
+
+            uint32_t rn;
+            res = lv_fs_read(&lv_file, buff, 22, &rn);
+            if (res != LV_FS_RES_OK || rn != 22) {
+                lv_fs_close(&lv_file);
+                return LV_RES_INV;
+            }
+
+            if (strcmp((char *)buff, "_SJPG__") == 0) {
+
+                SJPEG *sjpg = (SJPEG *)dsc->user_data;
+                if (sjpg == NULL) {
+                    sjpg = malloc(sizeof(SJPEG));
+                    if (! sjpg) {
+                        ESP_LOGI(TAG, "Failed to allocate memory for sjpg");
+                        lv_fs_close(&lv_file);
+                        return LV_RES_INV;
+                    }
+                    memset(sjpg, 0, sizeof(SJPEG));
+                    dsc->user_data = sjpg;
+                }
+                data = buff;
+                data += 14;
+
+                sjpg->sjpg_x_res = *data++;
+                sjpg->sjpg_x_res |= *data++ << 8;
+
+                sjpg->sjpg_y_res = *data++;
+                sjpg->sjpg_y_res |= *data++ << 8;
+
+                sjpg->sjpg_total_frames = *data++;
+                sjpg->sjpg_total_frames |= *data++ << 8;
+
+                sjpg->sjpg_single_frame_height = *data++;
+                sjpg->sjpg_single_frame_height |= *data++ << 8;
+
+                ESP_LOGI(TAG, "[%d,%d], frames:%d, height:%d", sjpg->sjpg_x_res, sjpg->sjpg_y_res, \
+                         sjpg->sjpg_total_frames, sjpg->sjpg_single_frame_height);
+                sjpg->frame_base_offset = malloc(sizeof(int *) * sjpg->sjpg_total_frames);
+                if (! sjpg->frame_base_offset) {
+                    ESP_LOGE(TAG, "Not enough memory for frame_base_offset allocation");
+                    lv_sjpg_cleanup(sjpg);
+                    sjpg = NULL;
+                    return LV_RES_INV;
+                }
+
+                int img_frame_start_offset = 22 +  sjpg->sjpg_total_frames * 2;
+                sjpg->frame_base_offset[0] = img_frame_start_offset;
+
+                for (int i = 1; i <  sjpg->sjpg_total_frames; i++) {
+                    res = lv_fs_read(&lv_file, buff, 2, &rn);
+                    if (res != LV_FS_RES_OK || rn != 2) {
+                        lv_fs_close(&lv_file);
+                        return LV_RES_INV;
+                    }
+
+                    data = buff;
+                    int offset = *data++;
+                    offset |= *data++ << 8;
+                    sjpg->frame_base_offset[i] = sjpg->frame_base_offset[i - 1] + offset;
+                    ESP_LOGI(TAG,"srcfile offset:%d", offset);
+                }
+                    
+                sjpg->sjpg_cache_frame_index = -1;
+                sjpg->frame_cache = (void *)malloc(sjpg->sjpg_x_res * sjpg->sjpg_single_frame_height * 4);
+                if (!sjpg->frame_cache) {
+                    ESP_LOGE(TAG, "Not enough memory for frame_cache allocation");
+                    lv_fs_close(&lv_file);
+                    lv_sjpg_cleanup(sjpg);
+                    sjpg = NULL;
+                    return LV_RES_INV;
+                }
+                uint32_t total_size;
+                lv_fs_seek(&lv_file, 0, LV_FS_SEEK_END);
+                lv_fs_tell(&lv_file, &total_size);
+                sjpg->sjpg_data_size = total_size;
+
+                sjpg->io.lv_file = lv_file;
+                dsc->img_data = NULL;
+                return lv_ret;
+            }
         } else {
             return LV_RES_INV;
         }
@@ -453,12 +580,7 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
     lv_res_t error;
     uint8_t *img_data = NULL;
 
-    if (dsc->src_type == LV_IMG_SRC_FILE) {
-        ESP_LOGW(TAG, "Unsupported file format");
-        return LV_RES_INV;
-    } else if (dsc->src_type == LV_IMG_SRC_VARIABLE) {
-        SJPEG *sjpg = (SJPEG *) dsc->user_data;
-        uint8_t color_depth = 0;
+    uint8_t color_depth = 0;
 
 #if LV_COLOR_DEPTH == 32
         color_depth = 4;
@@ -468,6 +590,79 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
 #error Unsupported LV_COLOR_DEPTH
 #endif
 
+    if (dsc->src_type == LV_IMG_SRC_FILE) {
+        uint32_t rn = 0;
+        lv_fs_res_t res;
+
+        SJPEG *sjpg = (SJPEG *) dsc->user_data;
+
+        lv_fs_file_t *lv_file_p = &(sjpg->io.lv_file);
+        if (!lv_file_p) {
+            ESP_LOGI(TAG, "lv_img_decoder_read_line: lv_file_p");
+            return LV_RES_INV;
+        }
+        int jpg_req_frame_index = y / sjpg->sjpg_single_frame_height;
+        /*If line not from cache, refresh cache */
+        if (jpg_req_frame_index != sjpg->sjpg_cache_frame_index) {
+
+            if (jpg_req_frame_index == (sjpg->sjpg_total_frames - 1)) {
+                /*This is the last frame. */
+                sjpg->io.raw_sjpg_data_size = sjpg->sjpg_data_size - (uint32_t)(sjpg->frame_base_offset[jpg_req_frame_index]);
+            } else {
+                sjpg->io.raw_sjpg_data_size =
+                    (uint32_t)(sjpg->frame_base_offset[jpg_req_frame_index + 1] - (uint32_t)(sjpg->frame_base_offset[jpg_req_frame_index]));
+            }
+
+            int next_read_pos = (int)(sjpg->frame_base_offset [ jpg_req_frame_index ]);
+            lv_fs_seek(lv_file_p, next_read_pos, LV_FS_SEEK_SET);
+            res = lv_fs_read(lv_file_p, sjpg->frame_cache, sjpg->io.raw_sjpg_data_size, &rn);
+            
+            ESP_LOGI(TAG, "rn: %ld", rn);
+
+            uint32_t srcfile_check_sum = 0;
+            for (uint32_t i = 0; i < sjpg->io.raw_sjpg_data_size; i++)
+            {
+                srcfile_check_sum = srcfile_check_sum + sjpg->frame_cache[i];
+            }
+            ESP_LOGI(TAG,"srcfile_check_sum:%ld",srcfile_check_sum);
+
+            /*Print the front 10 byte*/ 
+            uint32_t i=0;
+            for ( i = 0; i < 10; i++)
+            {
+                printf("%x ",sjpg->frame_cache[i]);
+            }
+            printf("\n");
+
+            if (res != LV_FS_RES_OK || rn != sjpg->io.raw_sjpg_data_size) {
+                lv_fs_close(lv_file_p);
+                return LV_RES_INV;
+            }
+
+            lv_img_header_t header;
+            error = decode_jpeg(sjpg->frame_cache, rn, &header, &img_data);
+            if (error != LV_RES_OK) {
+                ESP_LOGE(TAG, "Decode (esp_jpg) error:%d, %d", error, __LINE__);
+                if (img_data != NULL) {
+                    free(img_data);
+                }
+                return LV_RES_INV;
+            } else {
+                memcpy(sjpg->frame_cache, img_data, sjpg->sjpg_x_res * sjpg->sjpg_single_frame_height * color_depth);
+                if (img_data != NULL) {
+                    free(img_data);
+                }
+                ESP_LOGI(TAG,"okkkkkkk");
+            }
+            sjpg->sjpg_cache_frame_index = jpg_req_frame_index;
+        }
+
+        uint8_t *cache = (uint8_t *)sjpg->frame_cache + x * color_depth + (y % sjpg->sjpg_single_frame_height) * sjpg->sjpg_x_res * color_depth;
+        memcpy(buf, cache, color_depth * len);
+        return LV_RES_OK;
+    } else if (dsc->src_type == LV_IMG_SRC_VARIABLE) {
+        SJPEG *sjpg = (SJPEG *) dsc->user_data;
+        
         int sjpg_req_frame_index = y / sjpg->sjpg_single_frame_height;
 
         /*If line not from cache, refresh cache */
@@ -484,9 +679,27 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
 
             lv_img_header_t header;             /*No used, just required by the decoder*/
 
+            ESP_LOGI(TAG,"raw_sjpg_data_size:%ld",sjpg->io.raw_sjpg_data_size); 
+
+            uint32_t variable_check_sum = 0;
+            for (uint32_t i = 0; i < sjpg->io.raw_sjpg_data_size; i++)
+            {
+                variable_check_sum = variable_check_sum + sjpg->io.raw_sjpg_data[i];
+            }
+            ESP_LOGI(TAG,"variable_check_sum:%ld",variable_check_sum);
+            
+
+            /*Print the front 10 byte*/ 
+            uint32_t i=0;
+            for ( i = 0; i < 10; i++)
+            {
+                printf("%x ",sjpg->io.raw_sjpg_data[i]);
+            }
+            printf("\n");
+            
             error = decode_jpeg(sjpg->io.raw_sjpg_data, sjpg->io.raw_sjpg_data_size, &header, &img_data);
             if (error != LV_RES_OK) {
-                ESP_LOGE(TAG, "Decode (esp_jpg) error:%d", error);
+                ESP_LOGE(TAG, "Decode (esp_jpg) error:%d, %d", error, __LINE__);
                 if (img_data != NULL) {
                     free(img_data);
                 }
@@ -499,7 +712,6 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
             }
             sjpg->sjpg_cache_frame_index = sjpg_req_frame_index;
         }
-
         uint8_t *cache = (uint8_t *)sjpg->frame_cache + x * color_depth + (y % sjpg->sjpg_single_frame_height) * sjpg->sjpg_x_res * color_depth;
         memcpy(buf, cache, color_depth * len);
         return LV_RES_OK;

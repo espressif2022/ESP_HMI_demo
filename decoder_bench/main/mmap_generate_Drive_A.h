@@ -13,11 +13,12 @@
 
 #include "esp_mmap_assets.h"
 
-#define MMAP_DRIVE_A_FILES           3
-#define MMAP_DRIVE_A_CHECKSUM        0xED6D
+#define MMAP_DRIVE_A_FILES           4
+#define MMAP_DRIVE_A_CHECKSUM        0x5ED1
 
 enum MMAP_DRIVE_A_LISTS {
     MMAP_DRIVE_A_NAVI_52_JPG = 0,        /*!< navi_52.jpg */
     MMAP_DRIVE_A_NAVI_52_PNG = 1,        /*!< navi_52.png */
     MMAP_DRIVE_A_NAVI_52_QOI = 2,        /*!< navi_52.qoi */
+    MMAP_DRIVE_A_NAVI_52_SJPG = 3,        /*!< navi_52.sjpg */
 };

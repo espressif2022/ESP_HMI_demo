@@ -62,6 +62,7 @@ def split_image(im, block_size, input_dir, ext, convert_to_qoi):
 
 def create_header(width, height, splits, split_height, lenbuf, ext):
     """Creates the header for the output file based on the format."""
+    print('create_header')
     header = bytearray()
 
     if ext.lower() == '.jpg':
@@ -89,7 +90,7 @@ def create_header(width, height, splits, split_height, lenbuf, ext):
     for item_len in lenbuf:
         # LENGTH 2 BYTES
         header += item_len.to_bytes(2, byteorder='little')
-
+        print(f'item_len:{item_len}')
     return header
 
 def save_image(output_file_path, header, split_data):
@@ -99,6 +100,7 @@ def save_image(output_file_path, header, split_data):
 
 def process_image(input_file, height_str, output_extension, convert_to_qoi=False):
     """Main function to process the image and save it as .sjpg, .spng, or .sqoi."""
+    print('process_image')
     try:
         SPLIT_HEIGHT = int(height_str)
         if SPLIT_HEIGHT <= 0:
@@ -139,9 +141,11 @@ def process_image(input_file, height_str, output_extension, convert_to_qoi=False
     print('Completed, saved as:', os.path.basename(output_file_path), '\n')
 
 def convert_image_to_qoi(input_file, height_str):
+    print('convert_image_to_qoi')
     process_image(input_file, height_str, '.sqoi', convert_to_qoi=True)
 
 def convert_image_to_simg(input_file, height_str):
+    print('convert_image_to_simg')
     input_dir, input_filename = os.path.split(input_file)
     _, ext = os.path.splitext(input_filename)
     output_extension = '.sjpg' if ext.lower() == '.jpg' else '.spng'
@@ -245,6 +249,7 @@ def copy_assets_to_build(assets_path, target_path, support_spng, support_sjpg, s
     """
     Copy assets to target_path based on sdkconfig
     """
+    print('copy_assets_to_build')
     format_string = support_format
     spng_enable = True if support_spng == 'ON' else False
     sjpg_enable = True if support_sjpg == 'ON' else False
@@ -254,17 +259,22 @@ def copy_assets_to_build(assets_path, target_path, support_spng, support_sjpg, s
     format_tuple = tuple(format_list)
     for filename in os.listdir(assets_path):
         if any(filename.endswith(suffix) for suffix in format_tuple):
+            print(f"File matches format: {filename}")
             shutil.copyfile(os.path.join(assets_path, filename), os.path.join(target_path, filename))
             if filename.endswith('.jpg') and sjpg_enable:
+                print("sjpg")
                 convert_image_to_simg(os.path.join(target_path, filename), split_height)
                 os.remove(os.path.join(target_path, filename))
             elif filename.endswith('.png') and spng_enable:
+                print("spng")
                 convert_image_to_simg(os.path.join(target_path, filename), split_height)
                 os.remove(os.path.join(target_path, filename))
             elif filename.endswith('.png') and qoi_enable:
+                print("png")
                 convert_image_to_qoi(os.path.join(target_path, filename), split_height)
                 os.remove(os.path.join(target_path, filename))
             elif filename.endswith('.jpg') and qoi_enable:
+                print("jpg")
                 convert_image_to_qoi(os.path.join(target_path, filename), split_height)
                 os.remove(os.path.join(target_path, filename))
         else:

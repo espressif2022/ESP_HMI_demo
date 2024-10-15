@@ -36,7 +36,7 @@ static const char *TAG = "perf_decoder";
 #define TEST_COUNTERS       1
 
 #define PARTITION_NUM       8
-
+//#define variable_test       0
 static lv_disp_drv_t *lv_disp_drv = NULL;
 static lv_disp_draw_buf_t *lv_disp_buf = NULL;
 static SemaphoreHandle_t lv_flush_sync_sem;
@@ -156,6 +156,16 @@ static void test_flush_callback(lv_disp_drv_t *drv, const lv_area_t *area, lv_co
     lv_disp_flush_ready(drv);
 }
 
+const uint8_t *test_assets_get_mem(int index)
+{
+    return mmap_assets_get_mem(mmap_drive_handle[6], index);
+}
+
+int test_assets_get_size(int index)
+{
+    return mmap_assets_get_size(mmap_drive_handle[6], index);
+}
+
 void test_performance_run(lv_obj_t *img, int ctr, const char *str1, const char *str2, const char *img_src)
 {
     lv_img_set_src(img, NULL);
@@ -252,11 +262,18 @@ void test_perf_decoder_fs_esp(void)
     lv_obj_set_align(img, LV_ALIGN_CENTER);
 
 RETRY:
-    char path[30];
+    //char path[30];
     for (int list = 0; list < PARTITION_NUM; list++) {
-        snprintf(path, sizeof(path), "%c:%s", 'A' + list, mmap_assets_get_name(mmap_drive_handle[list], 0));
-        ESP_LOGI(TAG, "PATH: %s", path);
-        test_performance_run(img, 0, "mmap_enable", "decoder", path);
+        // snprintf(path, sizeof(path), "%c:%s", 'A' + list, mmap_assets_get_name(mmap_drive_handle[list], 0));
+        //     ESP_LOGI(TAG, "PATH: %s", path);
+        #ifdef variable_test
+            static lv_img_dsc_t img_dsc;
+            img_dsc.data_size = test_assets_get_size(MMAP_DRIVE_7_NAVI_52_SJPG);
+            img_dsc.data = test_assets_get_mem(MMAP_DRIVE_7_NAVI_52_SJPG);
+            test_performance_run(img, 0, "variable", "decoder", (const void *)&img_dsc);
+        #else
+            test_performance_run(img, 0, "mmap_enable", "decoder", "G:navi_52.sjpg");
+        #endif
         vTaskDelay(pdMS_TO_TICKS(3000));
     }
     goto RETRY;

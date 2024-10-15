@@ -104,22 +104,22 @@ spiffs_create_partition_assets(
     MMAP_SUPPORT_SJPG
     MMAP_SPLIT_HEIGHT 16
 )
-# spiffs_create_partition_assets(
-#     assets_8
-#     ${Drive_JPG_QOI}
-#     FLASH_IN_PROJECT
-#     MMAP_FILE_SUPPORT_FORMAT ".jpg"
-#     MMAP_SUPPORT_QOI
-# )
-# spiffs_create_partition_assets(
-#     assets_9
-#     ${Drive_JPG_SQOI}
-#     FLASH_IN_PROJECT
-#     MMAP_FILE_SUPPORT_FORMAT ".jpg"
-#     MMAP_SUPPORT_QOI
-#     MMAP_SUPPORT_SQOI
-#     MMAP_SPLIT_HEIGHT 4
-# )
+spiffs_create_partition_assets(
+    assets_8
+    ${Drive_JPG_QOI}
+    FLASH_IN_PROJECT
+    MMAP_FILE_SUPPORT_FORMAT ".jpg"
+    MMAP_SUPPORT_QOI
+)
+spiffs_create_partition_assets(
+    assets_9
+    ${Drive_JPG_SQOI}
+    FLASH_IN_PROJECT
+    MMAP_FILE_SUPPORT_FORMAT ".jpg"
+    MMAP_SUPPORT_QOI
+    MMAP_SUPPORT_SQOI
+    MMAP_SPLIT_HEIGHT 4
+)
 spiffs_create_partition_assets(
     assets_10
     ${Drive_JPG_RAW}

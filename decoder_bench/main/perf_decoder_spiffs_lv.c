@@ -14,7 +14,7 @@ void test_perf_decoder_spiffs_lv(void)
     lv_obj_t *img = lv_img_create(lv_scr_act());
     lv_obj_set_align(img, LV_ALIGN_TOP_LEFT);
 
-    test_performance_run(img, 0, "spiffs", "lv_sjpg", (const void *)"C:/assets/navi_52.jpg");
+    test_performance_run(img, 0, "spiffs", "lv_sjpg", "C:/assets/navi_52.sjpg");
     test_performance_run(img, 0, "spiffs", "lv_spng", (const void *)"C:/assets/navi_52.png");
 
     test_lvgl_del_disp();
