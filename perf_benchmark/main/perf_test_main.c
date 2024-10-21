@@ -17,7 +17,6 @@
 #include "esp_lv_fs.h"
 #include "esp_lv_sjpg.h"
 #include "esp_lv_spng.h"
-#include "esp_lv_sqoi.h"
 
 #include "mmap_generate_Drive_A.h"
 #include "mmap_generate_Drive_B.h"
@@ -227,7 +226,6 @@ void test_perf_decoder_fs_esp(void)
 {
     esp_lv_sjpg_decoder_handle_t sjpg_handle = NULL;
     esp_lv_spng_decoder_handle_t spng_handle = NULL;
-    esp_lv_sqoi_decoder_handle_t sqoi_decoder = NULL;
 
     test_lvgl_add_disp();
 
@@ -249,12 +247,6 @@ void test_perf_decoder_fs_esp(void)
         return;
     }
 
-    ret_fs = esp_lv_split_qoi_init(&sqoi_decoder);
-    if (ret_fs != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize SQOI decoder");
-        return;
-    }
-
     lv_obj_t *obj_bg = lv_obj_create(lv_scr_act());
     lv_obj_set_size(obj_bg, LV_HOR_RES, LV_VER_RES);
     lv_obj_set_align(obj_bg, LV_ALIGN_CENTER);
@@ -266,11 +258,28 @@ void test_perf_decoder_fs_esp(void)
     lv_obj_set_align(img, LV_ALIGN_CENTER);
 
 RETRY:
-    //char path[30];
-    for (int list = 0; list < PARTITION_NUM; list++) {
+    char path[30];
+    static lv_img_dsc_t img_dsc;
+
+    for (int list = 4; list < PARTITION_NUM; list++) {
         for(int i = 0; i< mmap_assets_get_stored_files(mmap_drive_handle[list]); i++){
             snprintf(path, sizeof(path), "%c:%s", 'A' + list, mmap_assets_get_name(mmap_drive_handle[list], i));
-            test_performance_run(img, 0, path, "decoder", path);
+
+        
+            img_dsc.data_size = mmap_assets_get_size(mmap_drive_handle[list], i);
+            img_dsc.data = mmap_assets_get_mem(mmap_drive_handle[list], i);
+            if(strstr(path, ".bin")){
+                memcpy(&img_dsc.header, mmap_assets_get_mem(mmap_drive_handle[list], i), sizeof(lv_img_header_t));
+                // ESP_LOGI(TAG, "img_dsc.data_size = %d,%d, cf:%d, img_dsc.data:%p", img_dsc.header.w, img_dsc.header.h, img_dsc.header.cf, img_dsc.data);
+
+                img_dsc.data += sizeof(lv_img_header_t);
+                img_dsc.data_size -= sizeof(lv_img_header_t);
+            }
+        
+            test_performance_run(img, 0, path, "Mem", (const void *)&img_dsc);
+            vTaskDelay(pdMS_TO_TICKS(3000));
+
+            test_performance_run(img, 0, path, "File", path);
             vTaskDelay(pdMS_TO_TICKS(3000));
         }
     }
@@ -278,7 +287,6 @@ RETRY:
 
     esp_lv_split_jpg_deinit(sjpg_handle);
     esp_lv_split_png_deinit(spng_handle);
-    esp_lv_split_qoi_deinit(sqoi_decoder);
 
     test_lvgl_del_disp();
     test_flash_del_lv_fs();

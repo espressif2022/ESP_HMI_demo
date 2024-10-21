@@ -33,13 +33,22 @@ You can add them to your project via `idf.py add-dependancy`, e.g.
 ### Converting JPG to SJPG
 The [esp_mmap_assets](https://components.espressif.com/components/espressif/esp_mmap_assets) component is required. It will automatically package and convert JPG images to SJPG format during compilation.
 ```c
-    [12/1448] Move and Pack assets...
-    --support_format: .jpg,.png
-    --support_spng: ON
-    --support_sjpg: ON
+    spiffs_create_partition_assets(
+        my_spiffs_partition
+        my_folder
+        FLASH_IN_PROJECT
+        MMAP_FILE_SUPPORT_FORMAT ".jpg"
+        MMAP_SUPPORT_SJPG
+        MMAP_SPLIT_HEIGHT 16)
+
+    [5/20] Move and Pack assets...
+    --support_format: ['.jpg']
+    --support_spng: False
+    --support_sjpg: True
+    --support_qoi: False
+    --support_raw: False
     --split_height: 16
-    Input: temp_icon.jpg    RES: 90 x 90    splits: 6
-    Completed, saved as: temp_icon.sjpg
+    Completed navi_52.jpg -> navi_52.sjpg
 ```
 
 ### Initialization

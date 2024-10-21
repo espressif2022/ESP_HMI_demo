@@ -45,7 +45,7 @@ typedef struct {
     int sjpg_single_frame_height;
     int sjpg_cache_frame_index;
     uint8_t **frame_base_array;        //to save base address of each split frames upto sjpg_total_frames.
-    int * frame_base_offset;  
+    int * frame_base_offset;
     uint8_t *frame_cache;
     io_source_t io;
 } SJPEG;
@@ -178,7 +178,7 @@ static lv_res_t decode_jpeg(const uint8_t *input_buffer, uint32_t input_size, lv
             free(out_info);
         }
         jpeg_dec_close(jpeg_dec);
-        ESP_LOGE(TAG, "Failed to allocate mecoordinatesmory for jpeg decoder");
+        ESP_LOGE(TAG, "Failed to allocate memory for jpeg decoder");
         return LV_RES_INV;
     }
 
@@ -208,8 +208,7 @@ static lv_res_t decode_jpeg(const uint8_t *input_buffer, uint32_t input_size, lv
                 free(jpeg_io);
                 free(out_info);
                 jpeg_dec_close(jpeg_dec);
-                ESP_LOGE(TAG, "Failed to decode jpeg");
-                ESP_LOGE(TAG, "ret:%d", ret);
+                ESP_LOGE(TAG, "Failed to decode jpeg:[%d]", ret);
                 return LV_RES_INV;
             }
         }
@@ -220,7 +219,7 @@ static lv_res_t decode_jpeg(const uint8_t *input_buffer, uint32_t input_size, lv
         ESP_LOGE(TAG, "Failed to parse jpeg header");
         return LV_RES_INV;
     }
-    
+
     free(jpeg_io);
     free(out_info);
     jpeg_dec_close(jpeg_dec);
@@ -230,7 +229,7 @@ static lv_res_t decode_jpeg(const uint8_t *input_buffer, uint32_t input_size, lv
 
 static lv_res_t decoder_info(lv_img_decoder_t *decoder, const void *src, lv_img_header_t *header)
 {
-    
+
     LV_UNUSED(decoder);
     lv_img_src_t src_type = lv_img_src_get_type(src);
     lv_res_t lv_ret = LV_RES_OK;
@@ -306,7 +305,7 @@ static lv_res_t decoder_info(lv_img_decoder_t *decoder, const void *src, lv_img_
                     return LV_RES_INV;
                 }
                 header->always_zero = 0;
-                header->cf = LV_IMG_CF_TRUE_COLOR_ALPHA;
+                header->cf = LV_IMG_CF_TRUE_COLOR;
                 uint8_t * raw_jpg_data = buff;
                 header->w = *raw_jpg_data++;
                 header->w |= *raw_jpg_data++ << 8;
@@ -315,8 +314,6 @@ static lv_res_t decoder_info(lv_img_decoder_t *decoder, const void *src, lv_img_
                 lv_fs_close(&file);
                 return LV_RES_OK;
             }
-            // ESP_LOGW(TAG, "don't support format");
-            // return LV_RES_INV;
         } else {
             return LV_RES_INV;
         }
@@ -364,7 +361,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
             sjpg->sjpg_single_frame_height = *data++;
             sjpg->sjpg_single_frame_height |= *data++ << 8;
 
-            ESP_LOGI(TAG, "[%d,%d], frames:%d, height:%d", sjpg->sjpg_x_res, sjpg->sjpg_y_res, \
+            ESP_LOGD(TAG, "[%d,%d], frames:%d, height:%d", sjpg->sjpg_x_res, sjpg->sjpg_y_res, \
                      sjpg->sjpg_total_frames, sjpg->sjpg_single_frame_height);
 
             sjpg->frame_base_array = malloc(sizeof(uint8_t *) * sjpg->sjpg_total_frames);
@@ -406,7 +403,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 if (output_buffer) {
                     free(output_buffer);
                 }
-                ESP_LOGE(TAG, "Decode (esp_jpg) error:%d, %d", lv_ret, __LINE__);
+                ESP_LOGE(TAG, "Decode (esp_jpg) error");
                 lv_sjpg_cleanup(sjpg);
                 sjpg = NULL;
             }
@@ -451,7 +448,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 dsc->img_data = output_buffer;
                 jpg->frame_cache = output_buffer;
             } else {
-                ESP_LOGE(TAG, "Decode (esp_jpg) error:%d, %d", lv_ret, __LINE__);
+                ESP_LOGE(TAG, "Decode (esp_jpg) error");
                 if (output_buffer) {
                     free(output_buffer);
                 }
@@ -506,7 +503,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 sjpg->sjpg_single_frame_height = *data++;
                 sjpg->sjpg_single_frame_height |= *data++ << 8;
 
-                ESP_LOGI(TAG, "[%d,%d], frames:%d, height:%d", sjpg->sjpg_x_res, sjpg->sjpg_y_res, \
+                ESP_LOGD(TAG, "[%d,%d], frames:%d, height:%d", sjpg->sjpg_x_res, sjpg->sjpg_y_res, \
                          sjpg->sjpg_total_frames, sjpg->sjpg_single_frame_height);
                 sjpg->frame_base_offset = malloc(sizeof(int *) * sjpg->sjpg_total_frames);
                 if (! sjpg->frame_base_offset) {
@@ -531,7 +528,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                     offset |= *data++ << 8;
                     sjpg->frame_base_offset[i] = sjpg->frame_base_offset[i - 1] + offset;
                 }
-                    
+
                 sjpg->sjpg_cache_frame_index = -1;
                 sjpg->frame_cache = (void *)malloc(sjpg->sjpg_x_res * sjpg->sjpg_single_frame_height * 4);
                 if (!sjpg->frame_cache) {
@@ -581,9 +578,9 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
     uint8_t color_depth = 0;
 
 #if LV_COLOR_DEPTH == 32
-        color_depth = 4;
+    color_depth = 4;
 #elif LV_COLOR_DEPTH == 16
-        color_depth = 2;
+    color_depth = 2;
 #else
 #error Unsupported LV_COLOR_DEPTH
 #endif
@@ -623,7 +620,7 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
             lv_img_header_t header;
             error = decode_jpeg(sjpg->frame_cache, rn, &header, &img_data);
             if (error != LV_RES_OK) {
-                ESP_LOGE(TAG, "Decode (esp_jpg) error:%d, %d", error, __LINE__);
+                ESP_LOGE(TAG, "Decode (esp_jpg) error");
                 if (img_data != NULL) {
                     free(img_data);
                 }
@@ -642,7 +639,7 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
         return LV_RES_OK;
     } else if (dsc->src_type == LV_IMG_SRC_VARIABLE) {
         SJPEG *sjpg = (SJPEG *) dsc->user_data;
-        
+
         int sjpg_req_frame_index = y / sjpg->sjpg_single_frame_height;
 
         /*If line not from cache, refresh cache */
@@ -657,10 +654,10 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
                     (uint32_t)(sjpg->frame_base_array[sjpg_req_frame_index + 1] - sjpg->io.raw_sjpg_data);
             }
 
-            lv_img_header_t header;             /*No used, just required by the decoder*/ 
+            lv_img_header_t header;             /*No used, just required by the decoder*/
             error = decode_jpeg(sjpg->io.raw_sjpg_data, sjpg->io.raw_sjpg_data_size, &header, &img_data);
             if (error != LV_RES_OK) {
-                ESP_LOGE(TAG, "Decode (esp_jpg) error:%d, %d", error, __LINE__);
+                ESP_LOGE(TAG, "Decode (esp_jpg) error");
                 if (img_data != NULL) {
                     free(img_data);
                 }
@@ -697,6 +694,9 @@ static void decoder_close(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *dsc)
 
     switch (dsc->src_type) {
     case LV_IMG_SRC_FILE:
+        if (jpg->io.lv_file.file_d) {
+            lv_fs_close(&(jpg->io.lv_file));
+        }
         lv_sjpg_cleanup(jpg);
         break;
 
@@ -726,6 +726,9 @@ static void lv_sjpg_free(SJPEG *jpg)
     }
     if (jpg->frame_base_array) {
         free(jpg->frame_base_array);
+    }
+    if (jpg->frame_base_offset) {
+        free(jpg->frame_base_offset);
     }
 }
 

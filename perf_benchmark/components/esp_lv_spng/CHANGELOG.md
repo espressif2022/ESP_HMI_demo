@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.1.2 (2024-10-18)
+
+* Added support for parsing split PNG images from filesystem.
+
 ## v0.1.1 (2024-07-31)
 
 * Added support for parsing standard PNG images form filesystem.

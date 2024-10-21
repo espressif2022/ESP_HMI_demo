@@ -33,13 +33,22 @@ You can add them to your project via `idf.py add-dependancy`, e.g.
 ### Converting PNG to SPNG
 The [esp_mmap_assets](https://components.espressif.com/components/espressif/esp_mmap_assets) component is required. It will automatically package and convert PNG images to SPNG format during compilation.
 ```c
-    [12/1448] Move and Pack assets...
-    --support_format: .jpg,.png
-    --support_spng: ON
-    --support_sjpg: ON
+    spiffs_create_partition_assets(
+        my_spiffs_partition
+        my_folder
+        FLASH_IN_PROJECT
+        MMAP_FILE_SUPPORT_FORMAT ".png"
+        MMAP_SUPPORT_SPNG
+        MMAP_SPLIT_HEIGHT 16)
+
+    [9/20] Move and Pack assets...
+    --support_format: ['.png']
+    --support_spng: True
+    --support_sjpg: False
+    --support_qoi: False
+    --support_raw: False
     --split_height: 16
-    Input: temp_icon.png    RES: 90 x 90    splits: 6
-    Completed, saved as: temp_icon.spng 
+    Completed navi_52.png -> navi_52.spng
 ```
 
 ### Initialization

@@ -270,6 +270,7 @@ void lv_img_decoder_set_close_cb(lv_img_decoder_t * decoder, lv_img_decoder_clos
  * @param header store the image data here
  * @return LV_RES_OK: the info is successfully stored in `header`; LV_RES_INV: unknown format or other error.
  */
+#include <stdio.h>
 lv_res_t lv_img_decoder_built_in_info(lv_img_decoder_t * decoder, const void * src, lv_img_header_t * header)
 {
     LV_UNUSED(decoder); /*Unused*/
@@ -277,11 +278,13 @@ lv_res_t lv_img_decoder_built_in_info(lv_img_decoder_t * decoder, const void * s
     lv_img_src_t src_type = lv_img_src_get_type(src);
     if(src_type == LV_IMG_SRC_VARIABLE) {
         lv_img_cf_t cf = ((lv_img_dsc_t *)src)->header.cf;
+
         if(cf < CF_BUILT_IN_FIRST || cf > CF_BUILT_IN_LAST) return LV_RES_INV;
 
         header->w  = ((lv_img_dsc_t *)src)->header.w;
         header->h  = ((lv_img_dsc_t *)src)->header.h;
         header->cf = ((lv_img_dsc_t *)src)->header.cf;
+        // printf("variable, CF: %d, %d,%d\r\n", cf, ((lv_img_dsc_t *)src)->header.w, ((lv_img_dsc_t *)src)->header.h);
     }
     else if(src_type == LV_IMG_SRC_FILE) {
         /*Support only "*.bin" files*/
@@ -300,6 +303,7 @@ lv_res_t lv_img_decoder_built_in_info(lv_img_decoder_t * decoder, const void * s
         }
 
         if(header->cf < CF_BUILT_IN_FIRST || header->cf > CF_BUILT_IN_LAST) return LV_RES_INV;
+        // printf("file, CF: %d, %d,%d\r\n", header->cf, header->w, header->h);
     }
     else if(src_type == LV_IMG_SRC_SYMBOL) {
         /*The size depend on the font but it is unknown here. It should be handled outside of the
@@ -489,6 +493,7 @@ lv_res_t lv_img_decoder_built_in_read_line(lv_img_decoder_t * decoder, lv_img_de
         /*For TRUE_COLOR images read line required only for files.
          *For variables the image data was returned in `open`*/
         if(dsc->src_type == LV_IMG_SRC_FILE) {
+            // printf("lv_img_decoder_built_in_read_line, x=%d, y=%d, len=%d\r\n", x, y, len);
             res = lv_img_decoder_built_in_line_true_color(dsc, x, y, len, buf);
         }
     }

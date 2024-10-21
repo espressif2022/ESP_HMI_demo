@@ -1,4 +1,4 @@
-version: "0.1.1"
+version: "0.1.2"
 targets:
   - esp32
   - esp32c2
@@ -20,4 +20,4 @@ dependencies:
     version: ^8
   cmake_utilities: "0.*"
 examples:
-  - path: ../../../../examples/hmi/lvgl_spng
+  - path: ../../../../examples/hmi/perf_benchmark

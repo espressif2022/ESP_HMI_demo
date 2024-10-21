@@ -16,6 +16,9 @@
 #include "lvgl.h"
 #include "png.h"
 
+#define QOI_IMPLEMENTATION
+#include "qoi.h"
+
 /*********************
  *      DEFINES
  *********************/
@@ -53,6 +56,7 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
 static void decoder_close(lv_img_decoder_t *dec, lv_img_decoder_dsc_t *dsc);
 static void convert_color_depth(uint8_t *img, uint32_t px_cnt);
 static int is_png(const uint8_t *raw_data, size_t len);
+static int is_qoi(const uint8_t *raw_data, size_t len);
 static void lv_spng_cleanup(SPNG *spng);
 static void lv_spng_free(SPNG *spng);
 
@@ -138,6 +142,26 @@ lv_res_t libpng_decode32(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t 
     return LV_RES_OK;
 }
 
+lv_res_t qoi_decode32(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t *in, size_t insize)
+{
+    if (!in || !out || !w || !h) {
+        return LV_RES_INV;
+    }
+
+    qoi_desc image;
+    memset(&image, 0, sizeof(image));
+
+    unsigned char *pixels = qoi_decode(in, insize, &image, 0);
+
+    *w = image.width;
+    *h = image.height;
+    *out = pixels;
+    if (*out == NULL) {
+        return LV_RES_INV;
+    }
+    return LV_RES_OK;
+}
+
 static lv_fs_res_t png_load_file(const char *filename, uint8_t **buffer, size_t *size, bool read_head)
 {
     uint32_t len;
@@ -198,9 +222,8 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
         const lv_img_dsc_t *img_dsc = src;
         uint8_t *raw_spng_data = (uint8_t *)img_dsc->data;
         const uint32_t data_size = img_dsc->data_size;
-        const uint32_t *size = ((uint32_t *)img_dsc->data) + 4;
 
-        if (!strncmp((char *)raw_spng_data, "_SPNG__", strlen("_SPNG__"))) {
+        if (!strncmp((char *)raw_spng_data, "_SPNG__", strlen("_SPNG__")) || !strncmp((char *)raw_spng_data, "_SQOI__", strlen("_SQOI__"))) {
             raw_spng_data += 14; //seek to res info ... refer spng format
             header->always_zero = 0;
             header->cf = LV_IMG_CF_RAW_ALPHA;
@@ -213,6 +236,8 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
 
             return lv_ret;
         } else if (is_png(raw_spng_data, data_size) == true) {
+            const uint32_t *size = ((uint32_t *)img_dsc->data) + 4;
+
             header->always_zero = 0;
 
             if (img_dsc->header.cf) {
@@ -231,6 +256,30 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
                 header->h = img_dsc->header.h;         /*Save the color height*/
             } else {
                 header->h = (lv_coord_t)((size[1] & 0xff000000) >> 24) + ((size[1] & 0x00ff0000) >> 8);
+            }
+
+            return lv_ret;
+        } else if (is_qoi(raw_spng_data, data_size) == true) {
+            const uint8_t *size = ((uint8_t *)img_dsc->data) + 4;
+        
+            header->always_zero = 0;
+
+            if (img_dsc->header.cf) {
+                header->cf = img_dsc->header.cf;       /*Save the color format*/
+            } else {
+                header->cf = LV_IMG_CF_TRUE_COLOR_ALPHA;
+            }
+
+            if (img_dsc->header.w) {
+                header->w = img_dsc->header.w;         /*Save the image width*/
+            } else {
+                header->w = (lv_coord_t)((size[0] << 24) + (size[1] << 16) + (size[2] << 8) + (size[3] << 0));
+            }
+
+            if (img_dsc->header.h) {
+                header->h = img_dsc->header.h;         /*Save the color height*/
+            } else {
+                header->h = (lv_coord_t)((size[4] << 24) + (size[5] << 16) + (size[6] << 8) + (size[7] << 0));
             }
 
             return lv_ret;
@@ -255,8 +304,25 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
             header->w = (lv_coord_t)((size[0] & 0xff000000) >> 24) + ((size[0] & 0x00ff0000) >> 8);
             header->h = (lv_coord_t)((size[1] & 0xff000000) >> 24) + ((size[1] & 0x00ff0000) >> 8);
             free(png_data);
+            return lv_ret;
+        } else if (strcmp(lv_fs_get_ext(fn), "qoi") == 0) {
+            uint8_t *qoi_data = NULL;   /*Pointer to the loaded data. Same as the original file just loaded into the RAM*/
+            size_t qoi_data_size;       /*Size of `qoi_data` in bytes*/
 
-        } else if (strcmp(lv_fs_get_ext(fn), "spng") == 0) {
+            if (png_load_file(fn, &qoi_data, &qoi_data_size, true) != LV_FS_RES_OK) {
+                if (qoi_data) {
+                    free(qoi_data);
+                }
+                return LV_RES_INV;
+            }
+
+            const uint8_t *size = ((uint8_t *)qoi_data) + 4;
+            header->cf = LV_IMG_CF_TRUE_COLOR_ALPHA;
+            header->w = (lv_coord_t)((size[0] << 24) + (size[1] << 16) + (size[2] << 8) + (size[3] << 0));
+            header->h = (lv_coord_t)((size[4] << 24) + (size[5] << 16) + (size[6] << 8) + (size[7] << 0));
+            free(qoi_data);
+            return lv_ret;
+        } else if (!strcmp(lv_fs_get_ext(fn), "spng") || !strcmp(lv_fs_get_ext(fn), "sqoi")) {
 
             uint8_t buff[22];
             memset(buff, 0, sizeof(buff));
@@ -274,7 +340,7 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
                 return LV_RES_INV;
             }
 
-            if (strcmp((char *)buff, "_SPNG__") == 0) {
+            if (!strcmp((char *)buff, "_SPNG__") || !strcmp((char *)buff, "_SQOI__")) {
                 lv_fs_seek(&file, 14, LV_FS_SEEK_SET);
                 res = lv_fs_read(&file, buff, 4, &rn);
                 if (res != LV_FS_RES_OK || rn != 4) {
@@ -289,7 +355,7 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
                 header->h = *raw_png_data++;
                 header->h |= *raw_png_data++ << 8;
                 lv_fs_close(&file);
-                return LV_RES_OK;
+                return lv_ret;
             }
         } else {
             return LV_RES_INV;
@@ -335,7 +401,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
             spng->spng_data_size = ((lv_img_dsc_t *)(dsc->src))->data_size;
         }
 
-        if (!strncmp((char *) spng->spng_data, "_SPNG__", strlen("_SPNG__"))) {
+        if (!strncmp((char *) spng->spng_data, "_SPNG__", strlen("_SPNG__")) || !strncmp((char *) spng->spng_data, "_SQOI__", strlen("_SQOI__"))) {
             data = spng->spng_data;
             data += 14;
 
@@ -380,11 +446,15 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
             dsc->img_data = NULL;
 
             return lv_ret;
-        } else if (is_png(spng->spng_data, raw_spng_data_size) == true) {
+        } else if (is_png(spng->spng_data, raw_spng_data_size) == true || is_qoi(spng->spng_data, raw_spng_data_size) == true) {
             /*Decode the image in ARGB8888 */
-            lv_ret = libpng_decode32(&img_data, &png_width, &png_height, img_dsc->data, img_dsc->data_size);
+            if (is_png(spng->spng_data, raw_spng_data_size) == true ) {
+                lv_ret = libpng_decode32(&img_data, &png_width, &png_height, img_dsc->data, img_dsc->data_size);
+            } else if (is_qoi(spng->spng_data, raw_spng_data_size) == true ) {
+                lv_ret = qoi_decode32(&img_data, &png_width, &png_height, img_dsc->data, img_dsc->data_size);
+            }
             if (lv_ret != LV_RES_OK) {
-                ESP_LOGE(TAG, "Decode (libpng_decode32) error:%d", lv_ret);
+                ESP_LOGE(TAG, "Decode error:%d", lv_ret);
                 if (img_data != NULL) {
                     free(img_data);
                 }
@@ -407,7 +477,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
         uint32_t png_width;
         uint32_t png_height;
 
-        if (strcmp(lv_fs_get_ext(fn), "png") == 0) {
+        if (strcmp(lv_fs_get_ext(fn), "png") == 0 || strcmp(lv_fs_get_ext(fn), "qoi") == 0) {
             uint8_t *png_data = NULL;   /*Pointer to the loaded data. Same as the original file just loaded into the RAM*/
             size_t spng_data_size;       /*Size of `png_data` in bytes*/
 
@@ -431,10 +501,14 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 return LV_RES_INV;
             }
 
-            lv_ret = libpng_decode32(&img_data, &png_width, &png_height, png_data, spng_data_size);
+            if (strcmp(lv_fs_get_ext(fn), "png") == 0) {
+                lv_ret = libpng_decode32(&img_data, &png_width, &png_height, png_data, spng_data_size);
+            } else if (strcmp(lv_fs_get_ext(fn), "qoi") == 0) {
+                lv_ret = qoi_decode32(&img_data, &png_width, &png_height, png_data, spng_data_size);
+            }
             free(png_data);
             if (lv_ret != LV_RES_OK) {
-                ESP_LOGE(TAG, "Decode (libpng_decode32) error:%d", lv_ret);
+                ESP_LOGE(TAG, "Decode error:%d", lv_ret);
                 if (img_data != NULL) {
                     free(img_data);
                 }
@@ -448,7 +522,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 spng->frame_cache = img_data;
             }
             return lv_ret;
-        } else if (strcmp(lv_fs_get_ext(fn), "spng") == 0) {
+        } else if (strcmp(lv_fs_get_ext(fn), "spng") == 0 || strcmp(lv_fs_get_ext(fn), "sqoi") == 0) {
             uint8_t *data;
             uint8_t buff[22];
             memset(buff, 0, sizeof(buff));
@@ -466,13 +540,13 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 return LV_RES_INV;
             }
 
-            if (strcmp((char *)buff, "_SPNG__") == 0) {
+            if (!strcmp((char *)buff, "_SPNG__") || !strcmp((char *)buff, "_SQOI__")) {
 
                 SPNG *spng = (SPNG *)dsc->user_data;
                 if (spng == NULL) {
                     spng = malloc(sizeof(SPNG));
                     if (! spng) {
-                        ESP_LOGI(TAG, "Failed to allocate memory for spng");
+                        ESP_LOGE(TAG, "Failed to allocate memory for spng");
                         lv_fs_close(&lv_file);
                         return LV_RES_INV;
                     }
@@ -564,19 +638,19 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
 {
     LV_UNUSED(decoder);
 
-    lv_res_t error;
+    lv_res_t error = LV_RES_INV;
     uint8_t *img_data = NULL;
 
     uint8_t color_depth = 0;
 
 #if LV_COLOR_DEPTH == 32
-        color_depth = 4;
+    color_depth = 4;
 #elif LV_COLOR_DEPTH == 16
-        color_depth = 3;
+    color_depth = 3;
 #elif LV_COLOR_DEPTH == 8
-        color_depth = 2;
+    color_depth = 2;
 #elif LV_COLOR_DEPTH == 1
-        color_depth = 2;
+    color_depth = 2;
 #endif
 
     if (dsc->src_type == LV_IMG_SRC_FILE) {
@@ -587,7 +661,6 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
 
         lv_fs_file_t *lv_file_p = &(spng->io.lv_file);
         if (!lv_file_p) {
-            ESP_LOGI(TAG, "lv_img_decoder_read_line: lv_file_p");
             return LV_RES_INV;
         }
 
@@ -615,9 +688,13 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
             uint32_t png_height;            /*No used, just required by he decoder*/
 
             /*Decode the image in ARGB8888 */
-            error = libpng_decode32(&img_data, &png_width, &png_height, spng->frame_cache, rn);
+            if (is_png(spng->frame_cache, rn) == true ) {
+                error = libpng_decode32(&img_data, &png_width, &png_height, spng->frame_cache, rn);
+            } else if (is_qoi(spng->frame_cache, rn) == true ) {
+                error = qoi_decode32(&img_data, &png_width, &png_height, spng->frame_cache, rn);
+            }
             if (error != LV_RES_OK) {
-                ESP_LOGE(TAG, "Decode (libpng_decode32) error:%d", error);
+                ESP_LOGE(TAG, "Decode error:%d", error);
                 if (img_data != NULL) {
                     free(img_data);
                 }
@@ -656,7 +733,11 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
             uint32_t png_height;            /*No used, just required by he decoder*/
 
             /*Decode the image in ARGB8888 */
-            error = libpng_decode32(&img_data, &png_width, &png_height, spng->io.raw_spng_data, spng->io.raw_spng_data_size);
+            if (is_png(spng->io.raw_spng_data, spng->io.raw_spng_data_size) == true ) {
+                error = libpng_decode32(&img_data, &png_width, &png_height, spng->io.raw_spng_data, spng->io.raw_spng_data_size);
+            } else if (is_qoi(spng->io.raw_spng_data, spng->io.raw_spng_data_size) == true ) {
+                error = qoi_decode32(&img_data, &png_width, &png_height, spng->io.raw_spng_data, spng->io.raw_spng_data_size);
+            }
             if (error != LV_RES_OK) {
                 ESP_LOGE(TAG, "Decode (libpng_decode32) error:%d", error);
                 if (img_data != NULL) {
@@ -758,6 +839,15 @@ static void convert_color_depth(uint8_t *img, uint32_t px_cnt)
 static int is_png(const uint8_t *raw_data, size_t len)
 {
     const uint8_t magic[] = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
+    if (len < sizeof(magic)) {
+        return false;
+    }
+    return memcmp(magic, raw_data, sizeof(magic)) == 0;
+}
+
+static int is_qoi(const uint8_t *raw_data, size_t len)
+{
+    const uint8_t magic[] = {0x71, 0x6F, 0x69, 0x66};
     if (len < sizeof(magic)) {
         return false;
     }

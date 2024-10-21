@@ -10,9 +10,6 @@ dependencies:
   esp_lv_sjpg:
     version: "*"
     override_path: "../components/esp_lv_sjpg"
-  esp_lv_sqoi:
-    version: "*"
-    override_path: "../components/esp_lv_sqoi"
   lvgl/lvgl:
     version: "^8"
     override_path: "../components/lvgl__lvgl"

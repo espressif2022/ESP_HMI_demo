@@ -1,6 +1,7 @@
 version: "0.1.0"
 targets:
   - esp32
+  - esp32c2
   - esp32c3
   - esp32c6
   - esp32s2
@@ -15,4 +16,8 @@ dependencies:
   idf: ">=5.0"
   lvgl/lvgl:
     version: ^8
+  espressif/esp_new_jpeg:
+    version: 0.5.*
   cmake_utilities: "0.*"
+examples:
+  - path: ../../../../examples/hmi/perf_benchmark

@@ -1,6 +1,7 @@
 idf_component_register(
     SRCS "esp_lv_spng.c"
     INCLUDE_DIRS "include"
+    PRIV_INCLUDE_DIRS "priv_include"
 )
 
 include(package_manager)

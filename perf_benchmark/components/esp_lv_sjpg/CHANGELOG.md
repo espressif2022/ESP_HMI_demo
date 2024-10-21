@@ -1,7 +1,6 @@
 # ChangeLog
 
-## v0.1.0 Initial Version (2024-07-25)
+## v0.1.0 Initial Version (2024-10-18)
 
-* Added support for parsing split PNG images from variable.
-* Added support for parsing standard PNG images from variable.
-* Added support for parsing standard PNG images form filesystem.
+* Added support for parsing standard JPG and split JPG form from variable.
+* Added support for parsing standard JPG and split JPG form filesystem.

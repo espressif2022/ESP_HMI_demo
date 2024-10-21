@@ -78,7 +78,7 @@ def download_v8_script(convert_path):
                     check=True
                 )
             except subprocess.CalledProcessError as e:
-                print(f"Git clone failed: {e}")
+                print(f'Git clone failed: {e}')
                 sys.exit(1)
 
             # Checkout to the specific commit
@@ -91,10 +91,10 @@ def download_v8_script(convert_path):
                     check=True
                 )
             except subprocess.CalledProcessError as e:
-                print(f"Failed to checkout to the specific commit: {e}")
+                print(f'Failed to checkout to the specific commit: {e}')
                 sys.exit(1)
     else:
-        print("Error: convert_path is NULL")
+        print('Error: convert_path is NULL')
         sys.exit(1)
 
 def download_v9_script(url: str, destination: str) -> None:
@@ -125,13 +125,13 @@ def download_v9_script(url: str, destination: str) -> None:
             out_file.write(data)    # Write data to the local file
 
     except urllib.error.HTTPError as e:
-        print(f"HTTP Error: {e.code} - {e.reason} when accessing {url}")
+        print(f'HTTP Error: {e.code} - {e.reason} when accessing {url}')
         sys.exit(1)
     except urllib.error.URLError as e:
-        print(f"URL Error: {e.reason} when accessing {url}")
+        print(f'URL Error: {e.reason} when accessing {url}')
         sys.exit(1)
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        print(f'An unexpected error occurred: {e}')
         sys.exit(1)
 
 def split_image(im, block_size, input_dir, ext, convert_to_qoi):
@@ -209,7 +209,7 @@ def save_image(output_file_path, header, split_data):
         else:
             f.write(split_data)
 
-def handle_lvgl_version_v9(input_file: str, input_dir: str, 
+def handle_lvgl_version_v9(input_file: str, input_dir: str,
                                 input_filename: str, convert_path: str) -> None:
     """
     Handle conversion for LVGL versions greater than 9.0.
@@ -222,7 +222,7 @@ def handle_lvgl_version_v9(input_file: str, input_dir: str,
     """
 
     convert_file = os.path.join(convert_path, 'LVGLImage.py')
-    lvgl_image_url = "https://raw.githubusercontent.com/lvgl/lvgl/master/scripts/LVGLImage.py"
+    lvgl_image_url = 'https://raw.githubusercontent.com/lvgl/lvgl/master/scripts/LVGLImage.py'
 
     download_v9_script(url=lvgl_image_url, destination=convert_file)
     lvgl_script = Path(convert_file)
@@ -245,9 +245,9 @@ def handle_lvgl_version_v9(input_file: str, input_dir: str,
             stderr=subprocess.PIPE,
             text=True
         )
-        print(f"Completed {input_filename} -> BIN")
+        print(f'Completed {input_filename} -> BIN')
     except subprocess.CalledProcessError as e:
-        print("An error occurred while executing LVGLImage.py:")
+        print('An error occurred while executing LVGLImage.py:')
         print(e.stderr)
         sys.exit(e.returncode)
 
@@ -279,16 +279,16 @@ def handle_lvgl_version_v8(input_file: str, input_dir: str, input_filename: str,
             filepath=Path(input_file),
             f=config_data['support_raw_ff'],
             cf=config_data['support_raw_cf'],
-            ff="BIN",
+            ff='BIN',
             dither=config_data['support_raw_dither'],
             bgr_mode=config_data['support_raw_bgr'],
         )
-        print(f"Completed {input_filename} -> BIN")
+        print(f'Completed {input_filename} -> BIN')
     except KeyError as e:
-        print(f"Missing configuration key: {e}")
+        print(f'Missing configuration key: {e}')
         sys.exit(1)
     except Exception as e:
-        print(f"An error occurred during conversion: {e}")
+        print(f'An error occurred during conversion: {e}')
         sys.exit(1)
 
 def process_image(input_file, height_str, output_extension, convert_to_qoi=False):
@@ -366,10 +366,10 @@ def convert_image_to_raw(input_file: str) -> None:
     try:
         lvgl_version = version.parse(lvgl_ver_str)
     except version.InvalidVersion:
-        print(f"Invalid LVGL version format: {lvgl_ver_str}")
+        print(f'Invalid LVGL version format: {lvgl_ver_str}')
         sys.exit(1)
 
-    if lvgl_version >= version.parse("9.0.0"):
+    if lvgl_version >= version.parse('9.0.0'):
         handle_lvgl_version_v9(
             input_file=input_file,
             input_dir=input_dir,
@@ -528,7 +528,7 @@ def copy_assets(config: AssetCopyConfig):
             print(f'No match found for file: {filename}, format_tuple: {format_tuple}')
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Move and Pack assets.")
+    parser = argparse.ArgumentParser(description='Move and Pack assets.')
     parser.add_argument('--config', required=True, help='Path to the configuration file')
     args = parser.parse_args()
 
@@ -564,17 +564,19 @@ if __name__ == '__main__':
     )
 
     print('--support_format:', support_format)
-    print('--support_spng:', copy_config.spng_enable)
-    print('--support_sjpg:', copy_config.sjpg_enable)
-    print('--support_qoi:', copy_config.qoi_enable)
-    print('--support_raw:', copy_config.row_enable)
 
-    if copy_config.sqoi_enable:
-        print('--support_sqoi:', copy_config.sqoi_enable)
-    if copy_config.spng_enable or copy_config.sjpg_enable or copy_config.sqoi_enable:
-        print('--split_height:', copy_config.split_height)
-    if copy_config.row_enable:
-        print('--lvgl_version:', config_data['lvgl_ver'])
+    if '.jpg' in support_format or '.png' in support_format:
+        print('--support_spng:', copy_config.spng_enable)
+        print('--support_sjpg:', copy_config.sjpg_enable)
+        print('--support_qoi:', copy_config.qoi_enable)
+        print('--support_raw:', copy_config.row_enable)
+
+        if copy_config.sqoi_enable:
+            print('--support_sqoi:', copy_config.sqoi_enable)
+        if copy_config.spng_enable or copy_config.sjpg_enable or copy_config.sqoi_enable:
+            print('--split_height:', copy_config.split_height)
+        if copy_config.row_enable:
+            print('--lvgl_version:', config_data['lvgl_ver'])
 
     if os.path.isfile(image_file):
         os.remove(image_file)

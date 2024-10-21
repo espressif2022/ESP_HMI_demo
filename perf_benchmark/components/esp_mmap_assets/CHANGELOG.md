@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.3.0 (2024-10-18)
+
+* CMake Enhancements: Transitioned from Kconfig options to CMake arguments, supporting independent parameters for each partition.
+* JPG/PNG to QOI Conversion: Enabled conversion of JPG and PNG to QOI for optimized image handling.
+* LVGL Image Conversion: Added support for converting images to LVGL-compatible binary formats.
+
 ## v1.2.0 (2024-07-31)
 
 * Added mmap_enable flag.

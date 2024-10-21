@@ -13,10 +13,9 @@
 
 #include "esp_mmap_assets.h"
 
-#define MMAP_SPIFFS_ASSETS_FILES           2
-#define MMAP_SPIFFS_ASSETS_CHECKSUM        0xB1AD
+#define MMAP_DRIVE_G_FILES           1
+#define MMAP_DRIVE_G_CHECKSUM        0xF870
 
-enum MMAP_SPIFFS_ASSETS_LISTS {
-    MMAP_SPIFFS_ASSETS_JPG_JPG = 0,        /*!< jpg.jpg */
-    MMAP_SPIFFS_ASSETS_PNG_PNG = 1,        /*!< png.png */
+enum MMAP_DRIVE_G_LISTS {
+    MMAP_DRIVE_G_NAVI_52_SJPG = 0,        /*!< navi_52.sjpg */
 };
